@@ -709,41 +709,42 @@ function stopGPSLoading() {
 }
 
 // =====================================================
-// REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
+// REFRESH TARGET LOCATION (Versi Frontend GitHub)
 // =====================================================
-function refreshTargetLocation(callback) {
+async function refreshTargetLocation(callback) {
   // Simpan siapa yang sedang login SAAT INI
   const userRequesting = (userData && userData.username) ? userData.username : null;
   
   if (!userRequesting) return;
 
-  // Ambil status saat ini dari dropdown
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // ✅ CEK STATUS DINAS (Tanpa menunggu server)
-  // Jika status dinas, kita langsung ubah tampilannya di sini
-  if (currentStatus === "Dinas") {
+  // ✅ CEK STATUS YANG TIDAK BUTUH GPS (Tanpa menunggu server)
+  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
     targetLocation = null;
     lastTargetLocation = null;
     
-    // Jika ada callback (misal dari pemberitahuan sistem), jalankan
     if (typeof callback === "function") callback();
-    return; // Stop di sini, tidak perlu tanya server lagi
+    return; 
   }
 
-  // JIKA BUKAN DINAS, barulah kita ambil data dari Google Apps Script
-  google.script.run.withSuccessHandler(loc => {
+  // JIKA STATUS HADIR ATAU WFH, ambil data via FETCH API
+  try {
+    // Memanggil GAS dengan parameter action, user, dan status
+    const response = await fetch(`${GAS_URL}?action=getTargetLocation&user=${userRequesting}&status=${currentStatus}`);
+    const loc = await response.json();
+
     // PROTEKSI: Jika user sudah logout/ganti akun sebelum data sampai
     if (!userData || userData.username !== userRequesting) return;
 
     // Cek ulang status (takutnya user ganti status saat server sedang loading)
     const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
-    if (statusTerbaru === "Dinas") return; 
+    if (statusTerbaru === "Dinas" || statusTerbaru === "Izin" || statusTerbaru === "Sakit") return; 
 
     if (loc && loc.lat && loc.lon) {
       const newLocation = { lat: loc.lat, lon: loc.lon };
@@ -753,6 +754,7 @@ function refreshTargetLocation(callback) {
         lastTargetLocation = newLocation;
 
         if (gpsData[0] !== 0 && gpsData[1] !== 0) {
+          // Asumsi fungsi checkUserLocation sudah ada di file asli Anda
           checkUserLocation(gpsData[0], gpsData[1], statusTerbaru);
         }
       }
@@ -772,7 +774,11 @@ function refreshTargetLocation(callback) {
     }
 
     if (typeof callback === "function") callback();
-  }).getTargetLocation(userRequesting);
+
+  } catch (error) {
+    console.error("Gagal mengambil lokasi target:", error);
+    if (tampil) tampil.value = "Gagal terhubung ke server";
+  }
 }
 
 // =====================================================
