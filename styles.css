@@ -8,7 +8,7 @@
 /* ============================
    GLOBAL LAYOUT
 ============================ */
-.html, body {
+html, body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -18,7 +18,7 @@
     -webkit-text-size-adjust: 100%; /* Mencegah auto-resize font di iOS */
   }
 
-.body {
+body {
     font-family: "Poppins", sans-serif;
     background: #2acfe8;    /* Warna background halaman */
     padding: 30px;
