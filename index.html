@@ -1689,12 +1689,11 @@ fetch(GAS_URL, {
 
     img.src = fotoMurni;
   })
-  .withFailureHandler(() => {
+  .catch(() => {
     showPopup("❌ Gagal mengambil waktu server!", "error");
     isSnapping = false;
-  })
-  .getServerTime();
-});
+  });
+
 
 // ================================
 // Restart Kamera dan Foto
