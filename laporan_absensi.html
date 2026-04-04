@@ -1,0 +1,53 @@
+<!-- =========================================================================================================
+     BAGIAN LAPORAN ABSENSI
+     Fungsi: Menampilkan halaman laporan absensi pegawai
+     Detail:
+     - Tombol HOME untuk kembali ke halaman utama
+     - Title & Subtitle menunjukkan identitas instansi dan tujuan halaman
+     - Filter Status Pegawai untuk memilih jenis pegawai yang akan ditampilkan
+     - Tabel Laporan Absensi untuk menampilkan data pegawai:
+         Kolom: No, Nama, Jabatan, Hadir, Izin, Sakit, Dinas
+     - Tabel default menampilkan pesan "Gunakan filter untuk memuat data."
+========================================================================================================= -->
+<div id="Laporan-Absensi">
+    <div class="Laporan-Absensi-content">
+
+        <!-- ========= Tombol HOME di bagian paling atas ========== -->
+        <div class="text-center mb-3"> 
+            <button class="btn btn-secondary btn-home" onclick="closeLaporan_Absensi()">🏠 HOME</button>
+        </div>
+
+        <!-- ========= Title & Subtitle ========== -->
+        <div class="title">PEMERINTAH DESA GALUNGAN</div>
+        <div class="subtitle">LAPORAN ABSENSI PEGAWAI</div>
+
+        <hr>
+        
+        <div id="kopLaporan"></div>
+
+        <!-- ========= Tabel Laporan Absensi ========== -->
+        <div>
+            <div class="table-wrapper">
+                <table id="Laporan-Absensi-Table">
+                    <thead>
+                        <tr>
+                            <th>NO</th>
+                            <th>NAMA</th>
+                            <th>JABATAN</th>
+                            <th>HADIR</th>
+                            <th>IZIN</th>
+                            <th>SAKIT</th>
+                            <th>DINAS</th>
+                            <th>TK</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="8">Gunakan filter untuk memuat data.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
