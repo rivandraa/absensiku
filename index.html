@@ -2048,100 +2048,88 @@ let isshowLaporan = false;
 /**
  * Tampilkan halaman Laporan Absensi
  */
+/**
+ * Tampilkan halaman Laporan Absensi (Versi GitHub Pages)
+ */
 function showLaporan_Absensi() {
-    // 🚫 Cegah double klik
-    if (isshowLaporan) {
-        showTempPopup("⏳ Sedang memuat halaman, harap tunggu...");
-        return;
-    }
-
+    if (isshowLaporan) return;
     isshowLaporan = true;
 
+    // Simpan status halaman
     sessionStorage.setItem('page', 'Laporan_Absensi');
 
-    // Hentikan GPS dan webcam
-    //stopGPSMonitoring();
-    resetFoto();
-    //stopWebcam();
+    // Tampilkan loading
+    showPopup("Memuat halaman Laporan...", "loading"); 
 
-    // Tampilkan popup loading
-    showPopup("Memuat halaman Laporan Absensi...", "loading"); 
-
-    // Ambil HTML laporan dari server
-    google.script.run.withSuccessHandler(function(html) {
-
-        // Tampilkan halaman laporan
-        $('#InnerPage').html(html).show();
-        $('#AbsensiPage').hide();
-
-        // Load laporan sesuai filter default
-        loadLaporan_Absensi($("#InnerPage").find("#filterStatus").val());
-
-        // Event: ganti filter status
-        $("#InnerPage").on("change", "#filterStatus", function() {
-            const status = $(this).val();
-            loadLaporan_Absensi(status);
-        });
-
-        // Event: tombol kembali ke home
-        $("#InnerPage").on("click", "#homeBtn", closeLaporan_Absensi);
-
-        // Reset flag supaya bisa membuka lagi
-        isshowLaporan = false;
-
-    }).getLaporan_AbsensiHtml();
+    // Berpindah halaman ke file laporan_absensi.html
+    // Cara 1: Langsung pindah file (Paling stabil untuk kamera/GPS)
+    window.location.href = "laporan_absensi.html";
 }
 
 /**
  * Ambil dan tampilkan data Laporan Absensi sesuai status
  * @param {string} status - Status filter laporan (default "tetap")
  */
-function loadLaporan_Absensi() {
-    const tbody = $("#InnerPage").find("#Laporan-Absensi-Table tbody");
-    tbody.html('<tr><td colspan="8">Loading...</td></tr>');
+// Ambil data User dari sessionStorage yang disimpan saat login di index.html
+const userData = JSON.parse(sessionStorage.getItem('userData'));
 
-    showPopup("Mengambil data Laporan Absensi...", "loading");
-
-    // ✅ Ambil spreadsheetId dari userData (diset saat login)
-    const spreadsheetId = userData && userData.spreadsheetId ? userData.spreadsheetId : null;
-
-    if (!spreadsheetId) {
-        showPopup("ID tidak ditemukan untuk user ini", "error");
-        tbody.html('<tr><td colspan="8">Spreadsheet ID kosong / user belum login.</td></tr>');
+$(document).ready(function() {
+    if (!userData) {
+        window.location.href = "index.html"; // Tendang ke login jika tidak ada data
         return;
     }
+    
+    // Muat data pertama kali
+    loadLaporan_Absensi();
 
-    google.script.run.withSuccessHandler(res => {
-      showPopup("Mengambil data sukses", "success"); 
-      if (res) {
-        // ✅ render kop
-        $("#kopLaporan").text(res.kop || "");
+    // Event Klik Kembali
+    $("#homeBtn").on("click", function() {
+        window.location.href = "index.html";
+    });
+});
 
-        // ✅ render header tabel
-        let theadHtml = "<tr>";
-        res.header.forEach(h => {
-          theadHtml += `<th>${h}</th>`;
+function loadLaporan_Absensi() {
+    const tbody = $("#Laporan-Absensi-Table tbody");
+    tbody.html('<tr><td colspan="8">Loading data dari Google Sheets...</td></tr>');
+
+    const spreadsheetId = userData.spreadsheetId;
+    
+    // GANTI URL_GAS_ANDA dengan URL Web App /exec Anda
+    const urlWebApps = "https://script.google.com/macros/s/AKfycb...XXXX/exec";
+
+    // Mengambil data menggunakan FETCH (Pengganti google.script.run)
+    fetch(`${urlWebApps}?action=getLaporan&id=${spreadsheetId}`)
+        .then(response => response.json())
+        .then(res => {
+            if (res) {
+                $("#kopLaporan").text(res.kop || "");
+                
+                // Render Table Header
+                let theadHtml = "<tr>" + res.header.map(h => `<th>${h}</th>`).join("") + "</tr>";
+                $("#Laporan-Absensi-Table thead").html(theadHtml);
+
+                // Render Table Body
+                let tbodyHtml = res.rows.map(r => `
+                    <tr>
+                        <td>${r.no}</td>
+                        <td>${r.nama}</td>
+                        <td>${r.jabatan}</td>
+                        <td>${r.hadir}</td>
+                        <td>${r.izin}</td>
+                        <td>${r.sakit}</td>
+                        <td>${r.dinas}</td>
+                        <td>${r.tanpaKeterangan}</td>
+                    </tr>
+                `).join("");
+                
+                tbody.html(tbodyHtml);
+                showPopup("Data berhasil dimuat", "success");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            tbody.html('<tr><td colspan="8">Gagal mengambil data. Pastikan CORS aktif.</td></tr>');
         });
-        theadHtml += "</tr>";
-        $("#Laporan-Absensi-Table thead").html(theadHtml);
-
-        // ✅ render isi tabel
-        let tbodyHtml = "";
-        res.rows.forEach((r, index) => {
-          tbodyHtml += `<tr>
-            <td>${r.no}</td>
-            <td>${r.nama}</td>
-            <td>${r.jabatan}</td>
-            <td>${r.hadir}</td>
-            <td>${r.izin}</td>
-            <td>${r.sakit}</td>
-            <td>${r.dinas}</td>
-            <td>${r.tanpaKeterangan}</td>
-          </tr>`;
-        });
-        $("#Laporan-Absensi-Table tbody").html(tbodyHtml);
-      }
-    }).getLaporan_Absensi(spreadsheetId);
 }
 
 /**
