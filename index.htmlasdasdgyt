@@ -204,6 +204,7 @@
 <!-- JQuery -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
+const GAS_URL = "https://script.google.com/macros/s/XXXXXXXXX/exec";
 
 /* =========================================================================================================
     BAGIAN KODE TANGGAL
@@ -395,92 +396,93 @@ function vibrateAlertLong() {
 /**
  * Meng-hash password menggunakan SHA-256 dan mengembalikannya dalam format Base64
  */
+// ================================
+// Hashing Password (tetap sama)
+// ================================
 async function hashPassword(password) {
     try {
-        const msgUint8 = new TextEncoder().encode(password); // Konversi password menjadi Uint8Array
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8); // Hash SHA-256
-        const hashArray = Array.from(new Uint8Array(hashBuffer)); // Konversi buffer ke array
-        const hashBase64 = btoa(String.fromCharCode.apply(null, hashArray)); // Encode Base64
+        const msgUint8 = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashBase64 = btoa(String.fromCharCode.apply(null, hashArray));
         return hashBase64;
     } catch (e) {
         console.error("Hashing Error:", e);
-        showPopup("⚠️ Gagal memproses password. Cek konsol browser.", "error", 3000);
-        return ""; // Mengembalikan string kosong jika gagal
+        showPopup("⚠️ Gagal memproses password.", "error", 3000);
+        return "";
     }
 }
 
 // ================================
-// LOGIN
+// LOGIN (VERSI FETCH)
 // ================================
-/**
- * Proses login user
- */
 async function loginUser() {
-    hideAlerts(); // Sembunyikan alert sebelumnya
+    hideAlerts();
 
     const username = $('#username').val().trim();
     const password = $('#password').val().trim();
 
-    showPopup("Memproses login...", "loading"); // Popup loading
+    showPopup("Memproses login...", "loading");
 
-    const passwordHash = await hashPassword(password); // Hash password sebelum dikirim ke server
+    const passwordHash = await hashPassword(password);
 
-    google.script.run
-        .withSuccessHandler(res => {
-            if (res) {
-                // ✅ Login berhasil
-                userData = res;
+    try {
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                action: "login",
+                username: username,
+                password: passwordHash
+            })
+        });
 
-                // simpan semua data termasuk spreadsheetId & folderId
-                sessionStorage.setItem('userData', JSON.stringify(res));
-                sessionStorage.setItem('page', 'absen');
+        const res = await response.json();
 
-                $('#LoginPage').hide();
-                $('#AbsensiPage').show();
+        if (res && res.status === "success") {
+            const user = res.data;
 
-                // Set informasi perangkat/user
-                $('#perangkatDisplay').val(res.nama + ' | ' + res.jabatan);
-                $('#perangkatData').val(res.nama + '|' + res.jabatan);
+            sessionStorage.setItem('userData', JSON.stringify(user));
+            sessionStorage.setItem('page', 'absen');
 
-                fotoData = null; // Reset foto
+            $('#LoginPage').hide();
+            $('#AbsensiPage').show();
 
-                // Parsing koordinat dari Spreadsheet
-                if (res.koordinat) {
-                    const parts = res.koordinat.split(",");
-                    targetLocation = {
-                        lat: parseFloat(parts[0]),
-                        lon: parseFloat(parts[1])
-                    };
-                    lastTargetLocation = targetLocation;
-                } else {
-                    targetLocation = null;
-                    lastTargetLocation = null;
-                }
+            $('#perangkatDisplay').val(user.nama + ' | ' + user.jabatan);
+            $('#perangkatData').val(user.nama + '|' + user.jabatan);
 
-                // Debug log ID
-                console.log("Spreadsheet ID:", res.spreadsheetId);
-                console.log("Folder ID:", res.folderId);
-                
-                showPopup("Login berhasil! Selamat datang " + res.nama, "success");
+            fotoData = null;
 
-                startIdleTimer();
-                startGPS();
-                startWebcam();
-                
+            if (user.koordinat) {
+                const parts = user.koordinat.split(",");
+                targetLocation = {
+                    lat: parseFloat(parts[0]),
+                    lon: parseFloat(parts[1])
+                };
+                lastTargetLocation = targetLocation;
             } else {
-                // Username/password salah
-                $('#alertLogin').html("⚠️ Username atau Password salah!").show();
-                showPopup("Username atau password salah!", "error");
+                targetLocation = null;
+                lastTargetLocation = null;
             }
-        })
-        .withFailureHandler(error => {
-            // ✅ Tangkap error dari server (misalnya ID kosong)
-            console.error("Server Error:", error);
-            const msg = error && error.message ? error.message : "Gagal terhubung ke server/Login Gagal. Coba lagi...";
-            showPopup("⚠️ " + msg, "error", 5000);
-            $('#alertLogin').html("⚠️ " + msg).show();
-        })
-        .checkLogin(username, passwordHash); // Panggil Apps Script server untuk validasi login
+
+            showPopup("Login berhasil! Selamat datang " + user.nama, "success");
+
+            startIdleTimer();
+            startGPS();
+            startWebcam();
+
+        } else {
+            $('#alertLogin').html("⚠️ Username atau Password salah!").show();
+            showPopup("Username atau password salah!", "error");
+        }
+
+    } catch (error) {
+        console.error("Server Error:", error);
+        showPopup("⚠️ Gagal terhubung ke server", "error", 5000);
+        $('#alertLogin').html("⚠️ Gagal terhubung ke server").show();
+    }
 }
 
 /* =========================================================================================================
@@ -687,46 +689,63 @@ function stopGPSLoading() {
 }
 
 // =====================================================
-// REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
+// REFRESH TARGET LOCATION (VERSI FETCH)
 // =====================================================
 function refreshTargetLocation(callback) {
-  // Simpan siapa yang sedang login SAAT INI
+
   const userRequesting = (userData && userData.username) ? userData.username : null;
-  
   if (!userRequesting) return;
 
-  // Ambil status saat ini dari dropdown
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // ✅ CEK STATUS DINAS (Tanpa menunggu server)
-  // Jika status dinas, kita langsung ubah tampilannya di sini
+  // ✅ Jika DINAS → tidak perlu ke server
   if (currentStatus === "Dinas") {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
+
     targetLocation = null;
     lastTargetLocation = null;
-    
-    // Jika ada callback (misal dari pemberitahuan sistem), jalankan
+
     if (typeof callback === "function") callback();
-    return; // Stop di sini, tidak perlu tanya server lagi
+    return;
   }
 
-  // JIKA BUKAN DINAS, barulah kita ambil data dari Google Apps Script
-  google.script.run.withSuccessHandler(loc => {
-    // PROTEKSI: Jika user sudah logout/ganti akun sebelum data sampai
+  // ================================
+  // FETCH KE GAS
+  // ================================
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "get_lokasi",
+      username: userRequesting
+    })
+  })
+  .then(res => res.json())
+  .then(loc => {
+
+    // Proteksi user ganti akun
     if (!userData || userData.username !== userRequesting) return;
 
-    // Cek ulang status (takutnya user ganti status saat server sedang loading)
     const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
-    if (statusTerbaru === "Dinas") return; 
+    if (statusTerbaru === "Dinas") return;
 
     if (loc && loc.lat && loc.lon) {
-      const newLocation = { lat: loc.lat, lon: loc.lon };
 
-      if (!lastTargetLocation || lastTargetLocation.lat !== newLocation.lat || lastTargetLocation.lon !== newLocation.lon) {
+      const newLocation = {
+        lat: loc.lat,
+        lon: loc.lon
+      };
+
+      if (!lastTargetLocation ||
+          lastTargetLocation.lat !== newLocation.lat ||
+          lastTargetLocation.lon !== newLocation.lon) {
+
         targetLocation = newLocation;
         lastTargetLocation = newLocation;
 
@@ -738,19 +757,32 @@ function refreshTargetLocation(callback) {
       const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
 
       if (tampil) {
-        tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
+        tampil.value = (loc.nama && loc.nama.trim() !== "")
+          ? loc.nama
+          : koordinatMurni;
       }
+
       if (hidden) hidden.value = koordinatMurni;
 
     } else {
       targetLocation = null;
       lastTargetLocation = null;
+
       if (tampil) tampil.value = "Titik koordinat tidak ditentukan";
       if (hidden) hidden.value = "";
     }
 
     if (typeof callback === "function") callback();
-  }).getTargetLocation(userRequesting);
+
+  })
+  .catch(err => {
+    console.error("Gagal ambil lokasi:", err);
+
+    if (tampil) tampil.value = "Gagal mengambil lokasi";
+    if (hidden) hidden.value = "";
+
+    if (typeof callback === "function") callback();
+  });
 }
 
 // =====================================================
@@ -1431,8 +1463,17 @@ showPopup("Sinkronisasi waktu server...", "loading");
   // ================================
   // 🔥 2) AMBIL JAM SERVER SETELAH FOTO FIX
   // ================================
-google.script.run
-  .withSuccessHandler(serverTime => {
+fetch(GAS_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    action: "get_server_time"
+  })
+})
+.then(res => res.json())
+.then(serverTime => {
     fotoTimestamp = serverTime.iso;
 
     const tanggalServer = serverTime.tanggal;
@@ -1945,77 +1986,104 @@ function submitAbsensiForm() {
         }
     }
 
-    // ======================================
-    // DATA DIKIRIM KE APPS SCRIPT
-    // ======================================
-    // Default data
-    const data = {
-        nama: val[0],
-        jabatan: val[1],
-        status: statusRaw,
-        keterangan: keterangan,
-        statusPegawai: userData.statusPegawai,
-        spreadsheetId: userData.spreadsheetId,
-        folderId: userData.folderId
-    };
+// ======================================
+// DATA DIKIRIM KE GAS (VERSI FETCH)
+// ======================================
 
-    // Tambahkan foto & GPS hanya jika bukan Izin/Sakit
-    if (!(status === "izin" || status === "sakit")) {
-        data.foto = fotoData;
-        data.gps = gpsSaatFoto;
+// Default data
+const data = {
+    action: "absensi", // 🔥 WAJIB untuk router GAS
+    nama: val[0],
+    jabatan: val[1],
+    status: statusRaw,
+    keterangan: keterangan,
+    statusPegawai: userData.statusPegawai,
+    spreadsheetId: userData.spreadsheetId,
+    folderId: userData.folderId
+};
+
+// Tambahkan foto & GPS hanya jika bukan Izin/Sakit
+if (!(status === "izin" || status === "sakit")) {
+    data.foto = fotoData;
+    data.gps = gpsSaatFoto;
+}
+
+// Kunci tombol
+document.getElementById('snap').disabled = true;
+document.getElementById('reset').disabled = true;
+
+showPopup("Memproses absensi...", "loading");
+
+// ================================
+// FETCH KE GAS
+// ================================
+fetch(GAS_URL, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+})
+.then(res => res.json())
+.then(res => {
+
+    // 🔓 Buka tombol lagi
+    document.getElementById('snap').disabled = false;
+    document.getElementById('reset').disabled = false;
+    isSubmitting = false;
+
+    if (res) {
+        if (res.status === "berhasil") {
+            const waktuID = formatIndonesia(res.waktu);
+
+            showPopup(
+                `✅ Absensi berhasil!<br>Nama: <b>${res.nama}</b><br>Waktu Absen: <b>${waktuID}</b>`,
+                "success", 6000
+            );
+
+            vibrateAlertLong();
+
+            $('#status').val('');
+            $('#keterangan').val('');
+            fotoData = null;
+
+            $('#perangkatDisplay').val(userData.nama + ' | ' + userData.jabatan);
+
+            resetFoto();
+
+        } else if (res.status === "sudah_absen") {
+
+            const waktuID = formatIndonesia(res.waktu);
+
+            showPopup(
+                `⚠️ Anda sudah absen hari ini!<br>Waktu Absen: <b>${waktuID}</b>`,
+                "warning", 6000
+            );
+
+            vibrateAlertLong();
+
+        } else {
+            showPopup("⚠️ Terjadi kesalahan saat menyimpan absensi.", "error");
+            vibrateAlertShort();
+        }
+    } else {
+        showPopup("⚠️ Terjadi kesalahan tak terduga.", "error");
+        vibrateAlertShort();
     }
 
-    // Kunci tombol Snap & Reset
-    document.getElementById('snap').disabled = true;
-    document.getElementById('reset').disabled = true;
-    
-    showPopup("Memproses absensi...", "loading");
+})
+.catch(err => {
 
-    google.script.run
-        .withSuccessHandler(res => {
-            // 🔓 Buka kembali tombol setelah submit selesai
-            document.getElementById('snap').disabled = false;
-            document.getElementById('reset').disabled = false;
-            isSubmitting = false;
+    // 🔓 Buka tombol lagi
+    document.getElementById('snap').disabled = false;
+    document.getElementById('reset').disabled = false;
+    isSubmitting = false;
 
-            if (res) {
-                if (res.status === "berhasil") {
-                    const waktuID = formatIndonesia(res.waktu);
-                    showPopup(
-                        `✅ Absensi berhasil!<br>Nama: <b>${res.nama}</b><br>Waktu Absen: <b>${waktuID}</b>`,
-                        "success", 6000);
-                    vibrateAlertLong();  // 🔥 getaran
-                    $('#status').val('');
-                    $('#keterangan').val('');
-                    fotoData = null;
-                    $('#perangkatDisplay').val(userData.nama + ' | ' + userData.jabatan);
-                    resetFoto();
+    console.error("Error:", err);
 
-                } else if (res.status === "sudah_absen") {
-                    const waktuID = formatIndonesia(res.waktu);
-                    showPopup(
-                        `⚠️ Anda sudah absen hari ini!<br>Waktu Absen: <b>${waktuID}</b>`,
-                        "warning", 6000);
-                    vibrateAlertLong();  // 🔥 getaran
-                } else {
-                    showPopup("⚠️ Terjadi kesalahan saat menyimpan absensi.", "error");
-                    vibrateAlertShort();  // 🔥 getaran
-                }
-            } else {
-                showPopup("⚠️ Terjadi kesalahan tak terduga.", "error");
-                vibrateAlertShort();  // 🔥 getaran
-            }
-        })
-        .withFailureHandler(err => {
-            // 🔓 Buka kembali tombol setelah submit selesai
-            document.getElementById('snap').disabled = false;
-            document.getElementById('reset').disabled = false;
-            isSubmitting = false;
-            showPopup("⚠️ Gagal mengirim absensi: " + err.message, "error");
-            vibrateAlertLong();  // 🔥 getaran
-        })
-        .submitAbsensi(data);
-}
+    showPopup("⚠️ Gagal mengirim absensi", "error");
+    vibrateAlertLong();
+});
 
 /* =========================================================================================================
     BAGIAN KODE NAVIGASI & LAPORAN ABSENSI
@@ -2036,16 +2104,8 @@ function submitAbsensiForm() {
         * Filter status laporan
         * Tombol kembali ke home
 */
-// ================================
-// Fungsi Navigasi Laporan_Absensi
-// ================================
-let isshowLaporan = false;
-
-/**
- * Tampilkan halaman Laporan Absensi
- */
 function showLaporan_Absensi() {
-    // 🚫 Cegah double klik
+
     if (isshowLaporan) {
         showTempPopup("⏳ Sedang memuat halaman, harap tunggu...");
         return;
@@ -2055,37 +2115,40 @@ function showLaporan_Absensi() {
 
     sessionStorage.setItem('page', 'Laporan_Absensi');
 
-    // Hentikan GPS dan webcam
-    //stopGPSMonitoring();
     resetFoto();
-    //stopWebcam();
 
-    // Tampilkan popup loading
-    showPopup("Memuat halaman Laporan Absensi...", "loading"); 
+    showPopup("Memuat halaman Laporan Absensi...", "loading");
 
-    // Ambil HTML laporan dari server
-    google.script.run.withSuccessHandler(function(html) {
+    // ================================
+    // LOAD FILE HTML (BUKAN DARI GAS)
+    // ================================
+    fetch("laporan_absensi.html")
+    .then(res => res.text())
+    .then(html => {
 
-        // Tampilkan halaman laporan
         $('#InnerPage').html(html).show();
         $('#AbsensiPage').hide();
 
-        // Load laporan sesuai filter default
+        // 🔥 Load data laporan dari GAS
         loadLaporan_Absensi($("#InnerPage").find("#filterStatus").val());
 
-        // Event: ganti filter status
+        // Event filter
         $("#InnerPage").on("change", "#filterStatus", function() {
             const status = $(this).val();
             loadLaporan_Absensi(status);
         });
 
-        // Event: tombol kembali ke home
+        // Event tombol home
         $("#InnerPage").on("click", "#homeBtn", closeLaporan_Absensi);
 
-        // Reset flag supaya bisa membuka lagi
         isshowLaporan = false;
 
-    }).getLaporan_AbsensiHtml();
+    })
+    .catch(err => {
+        console.error(err);
+        showPopup("❌ Gagal memuat halaman laporan", "error");
+        isshowLaporan = false;
+    });
 }
 
 /**
@@ -2093,12 +2156,12 @@ function showLaporan_Absensi() {
  * @param {string} status - Status filter laporan (default "tetap")
  */
 function loadLaporan_Absensi() {
+
     const tbody = $("#InnerPage").find("#Laporan-Absensi-Table tbody");
     tbody.html('<tr><td colspan="8">Loading...</td></tr>');
 
     showPopup("Mengambil data Laporan Absensi...", "loading");
 
-    // ✅ Ambil spreadsheetId dari userData (diset saat login)
     const spreadsheetId = userData && userData.spreadsheetId ? userData.spreadsheetId : null;
 
     if (!spreadsheetId) {
@@ -2107,37 +2170,68 @@ function loadLaporan_Absensi() {
         return;
     }
 
-    google.script.run.withSuccessHandler(res => {
-      showPopup("Mengambil data sukses", "success"); 
-      if (res) {
-        // ✅ render kop
-        $("#kopLaporan").text(res.kop || "");
+    // ================================
+    // FETCH KE GAS
+    // ================================
+    fetch(GAS_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            action: "laporan",
+            spreadsheetId: spreadsheetId
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
 
-        // ✅ render header tabel
-        let theadHtml = "<tr>";
-        res.header.forEach(h => {
-          theadHtml += `<th>${h}</th>`;
-        });
-        theadHtml += "</tr>";
-        $("#Laporan-Absensi-Table thead").html(theadHtml);
+        showPopup("Mengambil data sukses", "success");
 
-        // ✅ render isi tabel
-        let tbodyHtml = "";
-        res.rows.forEach((r, index) => {
-          tbodyHtml += `<tr>
-            <td>${r.no}</td>
-            <td>${r.nama}</td>
-            <td>${r.jabatan}</td>
-            <td>${r.hadir}</td>
-            <td>${r.izin}</td>
-            <td>${r.sakit}</td>
-            <td>${r.dinas}</td>
-            <td>${r.tanpaKeterangan}</td>
-          </tr>`;
-        });
-        $("#Laporan-Absensi-Table tbody").html(tbodyHtml);
-      }
-    }).getLaporan_Absensi(spreadsheetId);
+        if (res) {
+
+            // ✅ KOP
+            $("#kopLaporan").text(res.kop || "");
+
+            // ✅ HEADER
+            let theadHtml = "<tr>";
+            res.header.forEach(h => {
+                theadHtml += `<th>${h}</th>`;
+            });
+            theadHtml += "</tr>";
+            $("#Laporan-Absensi-Table thead").html(theadHtml);
+
+            // ✅ BODY
+            let tbodyHtml = "";
+
+            if (res.rows && res.rows.length > 0) {
+                res.rows.forEach(r => {
+                    tbodyHtml += `<tr>
+                        <td>${r.no}</td>
+                        <td>${r.nama}</td>
+                        <td>${r.jabatan}</td>
+                        <td>${r.hadir}</td>
+                        <td>${r.izin}</td>
+                        <td>${r.sakit}</td>
+                        <td>${r.dinas}</td>
+                        <td>${r.tanpaKeterangan}</td>
+                    </tr>`;
+                });
+            } else {
+                tbodyHtml = `<tr><td colspan="8">Tidak ada data</td></tr>`;
+            }
+
+            $("#Laporan-Absensi-Table tbody").html(tbodyHtml);
+        }
+
+    })
+    .catch(err => {
+        console.error("Error laporan:", err);
+
+        showPopup("❌ Gagal mengambil data laporan", "error");
+
+        tbody.html('<tr><td colspan="8">Gagal mengambil data</td></tr>');
+    });
 }
 
 /**
@@ -2187,16 +2281,11 @@ function closeLaporan_Absensi() {
     - Menampilkan form di #InnerPage dan sembunyikan halaman absen utama
     - Mengisi username otomatis sesuai userData
 */
-// ================================
-// Fungsi Ubah Password
-// ================================
-/**
- * Buka Form Ubah Password
- */
 let isopenPengaturanPasswordForm = false;
 
 function openPengaturanPasswordForm() {
-        // 🚫 Cegah double klik
+
+    // 🚫 Cegah double klik
     if (isopenPengaturanPasswordForm) {
         showTempPopup("⏳ Sedang memuat halaman, harap tunggu...");
         return;
@@ -2206,33 +2295,41 @@ function openPengaturanPasswordForm() {
 
     sessionStorage.setItem('page', 'Pengaturan_Password');
 
-    // Hentikan GPS dan webcam sementara
-    //stopGPSMonitoring();
     resetFoto();
-    //stopWebcam();
 
     showPopup("Memuat Pengaturan Password...", "loading");
 
-    // Ambil HTML form dari server
-    google.script.run.withSuccessHandler(function(html) {
+    // ================================
+    // LOAD HTML DARI GITHUB
+    // ================================
+    fetch("pengaturan_password.html")
+    .then(res => res.text())
+    .then(html => {
+
         $('#InnerPage').html(html).show();
         $('#AbsensiPage').hide();
 
         // Isi username otomatis
-        $("#Pengaturan_PasswordUsername").val(userData.username || "");
+        $("#Pengaturan_PasswordUsername").val(userData?.username || "");
+
         forceClosePopup();
         isopenPengaturanPasswordForm = false;
 
-    }).getPengaturanPasswordHtml();
+    })
+    .catch(err => {
+        console.error(err);
+
+        showPopup("❌ Gagal memuat halaman pengaturan", "error");
+
+        isopenPengaturanPasswordForm = false;
+    });
 }
 
 // ================================
-// Fungsi Submit Ubah Password
+// Fungsi Submit Ubah Password (FETCH)
 // ================================
-/**
- * Submit Form Ubah Password
- */
 async function submitPengaturanPassword() {
+
     $('#Pengaturan_PasswordAlert').hide();
 
     const oldPass = $('#oldPassword').val();
@@ -2240,25 +2337,28 @@ async function submitPengaturanPassword() {
     const confirmPass = $('#confirmNewPassword').val();
     const username = $('#Pengaturan_PasswordUsername').val();
 
-    // Validasi password
+    // Validasi
     if (newPass.length < 6) { 
         $('#Pengaturan_PasswordAlert').html("Password baru minimal 6 karakter.").show();
         return;
     }
+
     if (newPass !== confirmPass) {
         $('#Pengaturan_PasswordAlert').html("Password baru dan konfirmasi tidak cocok.").show();
         return;
     }
+
     if (oldPass === newPass) {
         $('#Pengaturan_PasswordAlert').html("Password baru tidak boleh sama dengan password lama.").show();
         return;
     }
 
-    // Hash password lama & baru
+    // Hash password
     const oldPassHash = await hashPassword(oldPass); 
     const newPassHash = await hashPassword(newPass); 
 
     const data = {
+        action: "ganti_password", // 🔥 WAJIB
         username: username,
         oldPassword: oldPassHash,
         newPassword: newPassHash
@@ -2266,20 +2366,46 @@ async function submitPengaturanPassword() {
 
     showPopup("Memverifikasi dan mengubah password...", "loading");
 
-    // Kirim ke server / Apps Script
-    google.script.run.withSuccessHandler(res => {
-        // Reset input form
+    // ================================
+    // FETCH KE GAS
+    // ================================
+    fetch(GAS_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+
+        // Reset form
         $('#oldPassword, #newPassword, #confirmNewPassword').val('');
 
         if (res.status === "berhasil") {
-            showPopup("✅ Password berhasil diubah!", "success", null);
+
+            showPopup("✅ Password berhasil diubah!", "success", 4000);
+
         } else if (res.status === "salah_lama") {
+
             showPopup("⚠️ Password lama salah!", "error");
-            $('#Pengaturan_PasswordAlert').html("Password lama yang Anda masukkan salah.").show();
+
+            $('#Pengaturan_PasswordAlert')
+                .html("Password lama yang Anda masukkan salah.")
+                .show();
+
         } else {
+
             showPopup("⚠️ Gagal mengubah password. Hubungi Admin.", "error");
         }
-    }).updatePassword(data);
+
+    })
+    .catch(err => {
+
+        console.error("Error:", err);
+
+        showPopup("❌ Gagal terhubung ke server", "error");
+    });
 }
 
 /**
