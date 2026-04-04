@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <base target="_top"> 
 
-<!-- Bootstrap dulu -->
+<!-- Bootstrap CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<link rel="stylesheet" href="styles.css">
-     
+
+<?!= HtmlService.createHtmlOutputFromFile('styles').getContent() ?>
 </head>
 <body>
 
@@ -415,95 +415,72 @@ async function hashPassword(password) {
 /**
  * Proses login user
  */
-// Ganti bagian ini di index.html Anda
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxeeLLoLcCb194b3JJuJBX-2detUx02NTRn7s_3_FSKu4v1RyuRVD1dnuEIzcg9RGgB/exec"; // Masukkan URL Deployment GAS Anda
-
-/* =====================================================
-    FUNGSI LOGIN (VERSI GITHUB FRONTEND)
-   ===================================================== */
 async function loginUser() {
     hideAlerts(); // Sembunyikan alert sebelumnya
 
     const username = $('#username').val().trim();
     const password = $('#password').val().trim();
 
-    if (!username || !password) {
-        $('#alertLogin').html("⚠️ Harap isi username dan password!").show();
-        return;
-    }
-
     showPopup("Memproses login...", "loading"); // Popup loading
 
-    try {
-        const passwordHash = await hashPassword(password); // Hash password tetap di sisi client
+    const passwordHash = await hashPassword(password); // Hash password sebelum dikirim ke server
 
-        // Memanggil GAS menggunakan Fetch API dengan metode POST
-        const response = await fetch(GAS_URL, {
-            method: "POST",
-            mode: "cors", // Pastikan mode CORS aktif
-            body: JSON.stringify({
-                action: "checkLogin", // Kita beri tahu server aksi apa yang diinginkan
-                user: username,
-                pass: passwordHash
-            })
-        });
+    google.script.run
+        .withSuccessHandler(res => {
+            if (res) {
+                // ✅ Login berhasil
+                userData = res;
 
-        const res = await response.json();
+                // simpan semua data termasuk spreadsheetId & folderId
+                sessionStorage.setItem('userData', JSON.stringify(res));
+                sessionStorage.setItem('page', 'absen');
 
-        if (res && res.success !== false) {
-            // ✅ Login berhasil
-            userData = res;
+                $('#LoginPage').hide();
+                $('#AbsensiPage').show();
 
-            // Simpan semua data termasuk spreadsheetId & folderId ke sessionStorage
-            sessionStorage.setItem('userData', JSON.stringify(res));
-            sessionStorage.setItem('page', 'absen');
+                // Set informasi perangkat/user
+                $('#perangkatDisplay').val(res.nama + ' | ' + res.jabatan);
+                $('#perangkatData').val(res.nama + '|' + res.jabatan);
 
-            $('#LoginPage').hide();
-            $('#AbsensiPage').show();
+                fotoData = null; // Reset foto
 
-            // Set informasi perangkat/user
-            $('#perangkatDisplay').val(res.nama + ' | ' + res.jabatan);
-            $('#perangkatData').val(res.nama + '|' + res.jabatan);
+                // Parsing koordinat dari Spreadsheet
+                if (res.koordinat) {
+                    const parts = res.koordinat.split(",");
+                    targetLocation = {
+                        lat: parseFloat(parts[0]),
+                        lon: parseFloat(parts[1])
+                    };
+                    lastTargetLocation = targetLocation;
+                } else {
+                    targetLocation = null;
+                    lastTargetLocation = null;
+                }
 
-            fotoData = null; // Reset foto
+                // Debug log ID
+                console.log("Spreadsheet ID:", res.spreadsheetId);
+                console.log("Folder ID:", res.folderId);
+                
+                showPopup("Login berhasil! Selamat datang " + res.nama, "success");
 
-            // Parsing koordinat dari Spreadsheet
-            if (res.koordinat) {
-                const parts = res.koordinat.split(",");
-                targetLocation = {
-                    lat: parseFloat(parts[0]),
-                    lon: parseFloat(parts[1])
-                };
-                lastTargetLocation = targetLocation;
+                startIdleTimer();
+                startGPS();
+                startWebcam();
+                
             } else {
-                targetLocation = null;
-                lastTargetLocation = null;
+                // Username/password salah
+                $('#alertLogin').html("⚠️ Username atau Password salah!").show();
+                showPopup("Username atau password salah!", "error");
             }
-
-            // Debug log ID
-            console.log("Spreadsheet ID:", res.spreadsheetId);
-            console.log("Folder ID:", res.folderId);
-            
-            showPopup("Login berhasil! Selamat datang " + res.nama, "success");
-
-            // Jalankan fungsi-fungsi absensi asli
-            if (typeof startIdleTimer === "function") startIdleTimer();
-            if (typeof startGPS === "function") startGPS();
-            if (typeof startWebcam === "function") startWebcam();
-            
-        } else {
-            // Username/password salah (atau res null)
-            $('#alertLogin').html("⚠️ Username atau Password salah!").show();
-            showPopup("Username atau password salah!", "error");
-        }
-
-    } catch (error) {
-        // ✅ Tangkap error koneksi atau server
-        console.error("Connection Error:", error);
-        const msg = "Gagal terhubung ke server. Pastikan Web App GAS sudah di-deploy dengan akses 'Anyone'.";
-        showPopup("⚠️ " + msg, "error", 5000);
-        $('#alertLogin').html("⚠️ " + msg).show();
-    }
+        })
+        .withFailureHandler(error => {
+            // ✅ Tangkap error dari server (misalnya ID kosong)
+            console.error("Server Error:", error);
+            const msg = error && error.message ? error.message : "Gagal terhubung ke server/Login Gagal. Coba lagi...";
+            showPopup("⚠️ " + msg, "error", 5000);
+            $('#alertLogin').html("⚠️ " + msg).show();
+        })
+        .checkLogin(username, passwordHash); // Panggil Apps Script server untuk validasi login
 }
 
 /* =========================================================================================================
@@ -710,42 +687,41 @@ function stopGPSLoading() {
 }
 
 // =====================================================
-// REFRESH TARGET LOCATION (Versi Frontend GitHub)
+// REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-async function refreshTargetLocation(callback) {
+function refreshTargetLocation(callback) {
   // Simpan siapa yang sedang login SAAT INI
   const userRequesting = (userData && userData.username) ? userData.username : null;
   
   if (!userRequesting) return;
 
+  // Ambil status saat ini dari dropdown
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // ✅ CEK STATUS YANG TIDAK BUTUH GPS (Tanpa menunggu server)
-  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
+  // ✅ CEK STATUS DINAS (Tanpa menunggu server)
+  // Jika status dinas, kita langsung ubah tampilannya di sini
+  if (currentStatus === "Dinas") {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
     targetLocation = null;
     lastTargetLocation = null;
     
+    // Jika ada callback (misal dari pemberitahuan sistem), jalankan
     if (typeof callback === "function") callback();
-    return; 
+    return; // Stop di sini, tidak perlu tanya server lagi
   }
 
-  // JIKA STATUS HADIR ATAU WFH, ambil data via FETCH API
-  try {
-    // Memanggil GAS dengan parameter action, user, dan status
-    const response = await fetch(`${GAS_URL}?action=getTargetLocation&user=${userRequesting}&status=${currentStatus}`);
-    const loc = await response.json();
-
+  // JIKA BUKAN DINAS, barulah kita ambil data dari Google Apps Script
+  google.script.run.withSuccessHandler(loc => {
     // PROTEKSI: Jika user sudah logout/ganti akun sebelum data sampai
     if (!userData || userData.username !== userRequesting) return;
 
     // Cek ulang status (takutnya user ganti status saat server sedang loading)
     const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
-    if (statusTerbaru === "Dinas" || statusTerbaru === "Izin" || statusTerbaru === "Sakit") return; 
+    if (statusTerbaru === "Dinas") return; 
 
     if (loc && loc.lat && loc.lon) {
       const newLocation = { lat: loc.lat, lon: loc.lon };
@@ -755,7 +731,6 @@ async function refreshTargetLocation(callback) {
         lastTargetLocation = newLocation;
 
         if (gpsData[0] !== 0 && gpsData[1] !== 0) {
-          // Asumsi fungsi checkUserLocation sudah ada di file asli Anda
           checkUserLocation(gpsData[0], gpsData[1], statusTerbaru);
         }
       }
@@ -775,11 +750,7 @@ async function refreshTargetLocation(callback) {
     }
 
     if (typeof callback === "function") callback();
-
-  } catch (error) {
-    console.error("Gagal mengambil lokasi target:", error);
-    if (tampil) tampil.value = "Gagal terhubung ke server";
-  }
+  }).getTargetLocation(userRequesting);
 }
 
 // =====================================================
@@ -1457,28 +1428,29 @@ video.style.display = "none";
 
 showPopup("Sinkronisasi waktu server...", "loading");
 
-// ================================
-  // 🔥 2) AMBIL JAM SERVER VIA FETCH (PENGGANTI google.script.run)
   // ================================
-  fetch(`${GAS_URL}?action=getServerTime`)
-    .then(response => response.json())
-    .then(serverTime => {
-      // Jika serverTime valid, lanjutkan proses watermark
-      fotoTimestamp = serverTime.iso;
+  // 🔥 2) AMBIL JAM SERVER SETELAH FOTO FIX
+  // ================================
+google.script.run
+  .withSuccessHandler(serverTime => {
+    fotoTimestamp = serverTime.iso;
 
-      const tanggalServer = serverTime.tanggal;
-      const jamServer = serverTime.waktu; 
-      const hariServer = serverTime.hari || "";
-      const jamTampil = jamServer + " WITA";
-      const waktuFullServer = serverTime.full;
-      const gpsText = `${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`;
+    const tanggalServer = serverTime.tanggal;
+    const jamServer = serverTime.waktu; 
+    const hariServer = serverTime.hari || "";
+    const jamTampil = jamServer + " WITA";
+    const waktuFullServer = serverTime.full;
+    const gpsText = `${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`;
 
-      // --- LANJUTKAN PROSES WATERMARK SEPERTI BIASA ---
-      const ctx2 = canvas.getContext("2d");
-      const img = new Image();
+    // ==========================================
+    // 3) PROSES WATERMARK (SOFT GRADIENT)
+    // ==========================================
+    const ctx2 = canvas.getContext("2d");
+    const img = new Image();
 
-      img.onload = function () {
-        ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.onload = function () {
+
+      ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const marginBottom = 20;
       const startX = 30;
@@ -1658,29 +1630,30 @@ showPopup("Sinkronisasi waktu server...", "loading");
       // =============================
       // SIMPAN FOTO
       // =============================
-     const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
+      const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
 
-        fotoData = {
-          name: `${userData?.nama || "user"}_${waktuFullServer.replace(/[: ]/g, "_")}.jpeg`,
-          base64: finalFoto.split(",")[1],
-          type: "image/jpeg",
-          gps: gpsSaatFoto,
-          waktuServerISO: serverTime.iso,
-          waktuFotoISO: serverTime.iso
-        };
-
-        fotoPreview.src = finalFoto;
-        showPopup("Foto berhasil diambil ✅", "success", 1000);
-        isSnapping = false;
+      fotoData = {
+        name: `${userData?.nama || "user"}_${waktuFullServer.replace(/[: ]/g, "_")}.jpeg`,
+        base64: finalFoto.split(",")[1],
+        type: "image/jpeg",
+        gps: gpsSaatFoto,
+        waktuServerISO: serverTime.iso,
+        waktuFotoISO: serverTime.iso
       };
 
-      img.src = fotoMurni;
-    })
-    .catch(err => {
-      console.error("Error Jam Server:", err);
-      showPopup("❌ Gagal mengambil waktu server!", "error");
+      fotoPreview.src = finalFoto;
+      showPopup("Foto berhasil diambil ✅", "success", 1000);
       isSnapping = false;
-    });
+    };
+
+    img.src = fotoMurni;
+  })
+  .withFailureHandler(() => {
+    showPopup("❌ Gagal mengambil waktu server!", "error");
+    isSnapping = false;
+  })
+  .getServerTime();
+});
 
 // ================================
 // Restart Kamera dan Foto
