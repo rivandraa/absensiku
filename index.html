@@ -1,80 +1,97 @@
-/* =========================================================================================================
-    KODE KAMERA & FOTO (VERSI FRONTEND GITHUB)
-========================================================================================================= */
-let stream = null;
-let isStarting = false;
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi Kamera</title>
+    <style>
+        /* CSS agar tampilan bagus */
+        #video { 
+            width: 100%; 
+            max-width: 500px; 
+            transform: scaleX(-1); /* Efek Mirror */
+            display: none; 
+            border-radius: 10px;
+        }
+        #fotoPreview { 
+            width: 100%; 
+            max-width: 500px; 
+            display: none; 
+            border-radius: 10px;
+        }
+        .container { text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
 
-async function startWebcam() {
-  if (isStarting) return;
-  isStarting = true;
+    <div class="container">
+        <video id="video" autoplay playsinline></video>
+        <img id="fotoPreview">
+        
+        <br>
+        <button id="restartCamera" onclick="startWebcam()" class="btn">Buka Kamera</button>
+    </div>
 
-  const video = document.getElementById('video');
-  const preview = document.getElementById('fotoPreview');
-  const btn = document.getElementById('restartCamera');
+    <script>
+        /* TEMPELKAN KODE ANDA DI SINI */
+        let stream = null;
+        let isStarting = false;
 
-  if (btn) btn.disabled = true;
+        async function startWebcam() {
+            if (isStarting) return;
+            isStarting = true;
 
-  try {
-    // 1. Reset tampilan
-    if (preview) preview.style.display = 'none';
-    if (video) video.style.display = 'none';
-    
-    // 2. Stop stream lama jika ada
-    stopWebcam();
+            const video = document.getElementById('video');
+            const preview = document.getElementById('fotoPreview');
+            const btn = document.getElementById('restartCamera');
 
-    // 3. Konfigurasi kamera yang lebih "Mobile-Friendly"
-    const constraints = {
-      video: {
-        facingMode: "user", // Memaksa kamera depan (selfie)
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      },
-      audio: false
-    };
+            if (btn) btn.disabled = true;
 
-    // 4. Meminta izin kamera
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    
-    // Pasang stream ke elemen video
-    video.srcObject = stream;
+            try {
+                if (preview) preview.style.display = 'none';
+                if (video) video.style.display = 'none';
+                
+                stopWebcam();
 
-    // 5. Menangani pemuatan metadata (Penting untuk iOS)
-    await new Promise((resolve) => {
-      video.onloadedmetadata = () => {
-        video.play().then(resolve);
-      };
-    });
+                const constraints = {
+                    video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                };
 
-    video.style.display = 'block';
-    console.log("Kamera GitHub aktif ✅");
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
 
-  } catch (err) {
-    console.error("Error kamera:", err);
-    let userMessage = "Gagal akses kamera: " + err.message;
-    
-    if (err.name === "NotAllowedError") {
-        userMessage = "⚠️ Izin kamera ditolak. Harap izinkan akses kamera di pengaturan browser Anda.";
-    } else if (err.name === "NotReadableError") {
-        userMessage = "⚠️ Kamera sedang digunakan aplikasi lain.";
-    }
-    
-    // Gunakan fungsi popup asli Anda
-    if (typeof showPopup === "function") showPopup(userMessage, "error");
-    else alert(userMessage);
-    
-  } finally {
-    isStarting = false;
-    if (btn) btn.disabled = false;
-  }
-}
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(resolve);
+                    };
+                });
 
-function stopWebcam() {
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-  }
-  const video = document.getElementById('video');
-  if (video) {
-    video.srcObject = null;
-  }
-}
+                video.style.display = 'block';
+                console.log("Kamera GitHub aktif ✅");
+
+            } catch (err) {
+                console.error("Error kamera:", err);
+                alert("Gagal akses kamera: " + err.message);
+            } finally {
+                isStarting = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function stopWebcam() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            const video = document.getElementById('video');
+            if (video) {
+                video.srcObject = null;
+            }
+        }
+        
+        // Jalankan otomatis saat halaman dibuka
+        window.onload = startWebcam;
+    </script>
+</body>
+</html>
