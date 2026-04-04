@@ -1,0 +1,80 @@
+/* =========================================================================================================
+    KODE KAMERA & FOTO (VERSI FRONTEND GITHUB)
+========================================================================================================= */
+let stream = null;
+let isStarting = false;
+
+async function startWebcam() {
+  if (isStarting) return;
+  isStarting = true;
+
+  const video = document.getElementById('video');
+  const preview = document.getElementById('fotoPreview');
+  const btn = document.getElementById('restartCamera');
+
+  if (btn) btn.disabled = true;
+
+  try {
+    // 1. Reset tampilan
+    if (preview) preview.style.display = 'none';
+    if (video) video.style.display = 'none';
+    
+    // 2. Stop stream lama jika ada
+    stopWebcam();
+
+    // 3. Konfigurasi kamera yang lebih "Mobile-Friendly"
+    const constraints = {
+      video: {
+        facingMode: "user", // Memaksa kamera depan (selfie)
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+
+    // 4. Meminta izin kamera
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // Pasang stream ke elemen video
+    video.srcObject = stream;
+
+    // 5. Menangani pemuatan metadata (Penting untuk iOS)
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => {
+        video.play().then(resolve);
+      };
+    });
+
+    video.style.display = 'block';
+    console.log("Kamera GitHub aktif ✅");
+
+  } catch (err) {
+    console.error("Error kamera:", err);
+    let userMessage = "Gagal akses kamera: " + err.message;
+    
+    if (err.name === "NotAllowedError") {
+        userMessage = "⚠️ Izin kamera ditolak. Harap izinkan akses kamera di pengaturan browser Anda.";
+    } else if (err.name === "NotReadableError") {
+        userMessage = "⚠️ Kamera sedang digunakan aplikasi lain.";
+    }
+    
+    // Gunakan fungsi popup asli Anda
+    if (typeof showPopup === "function") showPopup(userMessage, "error");
+    else alert(userMessage);
+    
+  } finally {
+    isStarting = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+function stopWebcam() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  const video = document.getElementById('video');
+  if (video) {
+    video.srcObject = null;
+  }
+}
