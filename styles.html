@@ -1,0 +1,616 @@
+<head>
+<style>
+/* =========================================================================================================
+    CSS UTAMA APLIKASI ABSENSI
+    Fungsinya:
+    - Mengatur layout global
+    - Styling container, tombol, form, popup, kamera, dan media
+========================================================================================================= */
+/* ============================
+   GLOBAL LAYOUT
+============================ */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;           /* Pastikan body mengambil tinggi penuh layar */
+    overflow-y: auto;       /* Scroll vertikal jika konten melebihi tinggi */    
+    overflow-x: hidden; /* Mencegah geser kanan-kiri */
+    -webkit-text-size-adjust: 100%; /* Mencegah auto-resize font di iOS */
+  }
+
+body {
+    font-family: "Poppins", sans-serif;
+    background: #2acfe8;    /* Warna background halaman */
+    padding: 30px;
+}
+
+/* ============================
+   CONTAINER UTAMA
+============================ */
+.container {
+    background: #fff;
+    max-width: 700px;       /* Lebar maksimal container */
+    width: 100%;            /* Responsif */
+    height: auto;           /* Tinggi menyesuaikan konten */
+    padding: 40px 30px;
+    border-radius: 16px;
+    margin: 0 auto;         /* Center horizontally */
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transition: box-shadow 0.3s ease;
+    will-change: box-shadow; /* Optimasi hover effect */
+}
+
+.container:hover {
+    box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+}
+
+/* ============================
+   TITLE & SUBTITLE (FULL FIT)
+============================ */
+.title {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.subtitle {
+    text-align: center;
+    color: #555;
+    margin-bottom: 15px;
+
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* ============================
+   TANGGAL & WAKTU
+============================ */
+#tanggalWaktuLogin,
+#tanggalWaktuAbsen {
+    text-align: center;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* ============================
+   BUTTON UTAMA (ABSEN / REKAP / PASSWORD)
+============================ */
+.button input {
+    width: 100%;
+    padding: 12px;
+    color: #fff;
+    background: linear-gradient(135deg, #4CAF50, #45A049);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    white-space: normal; 
+    word-wrap: break-word;
+}
+
+.button input:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+    background: linear-gradient(135deg, #45A049, #4CAF50);
+}
+
+.button input:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* ============================
+   TOMBOL RESTART GPS
+============================ */
+.btn-gps {
+  background: linear-gradient(135deg, #4facfe, #00c6ff);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+.btn-gps:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(0,0,0,0.25);
+}
+
+/* ============================
+   MEDIA (KAMERA / FOTO)
+============================ */
+#video {
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: scaleX(-1); /* mirror hanya untuk live view */
+}
+
+#fotoPreview {
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: none;       /* JANGAN mirror preview */
+}
+
+/* ============================
+   KAMERA (STYLISH)
+============================ */
+#cameraContainer {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3/4;   /* tinggi otomatis menyesuaikan rasio */
+    background: #000;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+#cameraContainer video,
+#cameraContainer img {
+    position: absolute;
+    top: 0; left: 0;
+    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;    /* memastikan media memenuhi container */
+    transition: opacity 0.25s ease;
+}
+
+/* ============================
+   FLEX BUTTON (HADIR / IZIN / DLL)
+============================ */
+.d-flex button {
+    width: 100px;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-weight: 500;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.d-flex button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* ============================
+   TEXTAREA AUTO RESIZE
+============================ */
+textarea.form-control {
+    resize: none;          /* Nonaktifkan resize manual */
+    overflow: hidden;      /* Hilangkan scroll bar */
+    transition: height 0.2s ease;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+/* ============================
+   POPUP NOTIFIKASI
+============================ */
+#popupNotif {
+    position: fixed !important;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px); /* aman utk iOS */
+    max-width: 350px;
+    width: 90%;
+    padding: 10px 15px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #000;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 999999999 !important;   /* SUPER HIGH */
+
+    opacity: 0;
+    visibility: hidden;                 /* iOS wajib pakai visibility */
+    pointer-events: none;               /* popup tidak intercept input */
+
+    will-change: transform, opacity;    /* Safari fix */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+
+    transition: 
+        transform 0.4s ease,
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+    -webkit-transition: 
+        transform 0.4s ease,
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+}
+
+/* Saat muncul */
+#popupNotif.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Type warna */
+#popupNotif.success { border-top: 6px solid #28a745; }
+#popupNotif.error   { border-top: 6px solid #dc3545; }
+#popupNotif.warning { border-top: 6px solid #ffc107; }
+#popupNotif.loading { border-top: 6px solid #007bff; }
+
+/* ============================
+   POPUP SEMENTARA
+============================ */
+.popup-temp {
+    position: fixed !important;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px); /* aman utk iOS */
+    max-width: 350px;
+    width: 90%;
+    padding: 10px 15px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #000;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 999999999 !important;   /* SUPER HIGH */
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    will-change: transform, opacity;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+
+    transition: 
+        transform 0.4s ease,
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+    -webkit-transition: 
+        transform 0.4s ease,
+        opacity 0.4s ease,
+        visibility 0.4s ease;
+}
+
+/* Saat muncul */
+.popup-temp.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Type warna */
+.popup-temp.success { border-top: 6px solid #28a745; }
+.popup-temp.error   { border-top: 6px solid #dc3545; }
+.popup-temp.warning { border-top: 6px solid #ffc107; }
+.popup-temp.loading { border-top: 6px solid #007bff; }
+
+/* ============================
+   SPINNER LOADING
+============================ */
+.spinner {
+    width: 18px;
+    height: 18px;
+    margin: 0 auto;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    -webkit-animation: spin 1s linear infinite; /* Safari prefix */
+}
+
+@keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    0%   { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+
+/* ============================
+   TOMBOL HOME
+============================ */
+.btn-home {
+    width: 150px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #4CAF50, #45A049);
+    color: #fff !important;
+    font-weight: bold;
+    font-size: 16px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.btn-home:hover {
+    background: linear-gradient(135deg, #45A049, #4CAF50);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.btn-home:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* ============================
+   PLACEHOLDER TEXTAREA
+============================ */
+textarea::placeholder {
+    color: #888;
+    font-size: 11px;
+    line-height: 2;
+}
+
+/* ============================
+   GPS
+============================ */
+#gps:focus { outline: none; }
+#gps {
+  border: 1px solid #ccc;
+  padding: 8px;
+  min-height: 80px;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap; /* biar line-break normal */
+  font-family: inherit;
+}
+
+/* =========================================================================================================
+    CSS LAPORAN ABSENSI
+    Fungsinya:
+    - Styling container, tombol, form
+========================================================================================================= */
+/* ================================
+CSS CONTAINER & KONTEN LAPORAN ABSENSI
+================================ */
+#Laporan-Absensi { 
+    background: #fff;
+    max-width: 700px;
+    width: 100%;
+    height: auto;        /* tinggi menyesuaikan konten */
+    border-radius: 16px;
+    margin: 0 auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transition: box-shadow 0.3s ease; /* Hanya box-shadow */
+    will-change: box-shadow;
+}
+
+#Laporan-Absensi:hover {
+    box-shadow: 0 12px 25px rgba(0,0,0,0.3); /* efek hover */
+}
+
+#Laporan-Absensi .Laporan-Absensi-content { 
+    margin: 0 auto; 
+    background: #fff;
+    padding: 25px; 
+    border-radius: 12px; 
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1); 
+    box-sizing: border-box; /* agar padding tidak menambah lebar */
+}
+
+/* ================================
+   WRAPPER TABEL
+================================ */
+#Laporan-Absensi .table-wrapper {
+    width: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch; /* smooth scroll di iOS */
+}
+
+/* ================================
+   JUDUL H2
+================================ */
+#Laporan-Absensi h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+/* ================================
+   TABEL REKAP ABSENSI
+================================ */
+#kopLaporan {
+  text-align: center;   /* posisi teks di tengah */
+  //font-weight: bold;    /* biar lebih menonjol */
+  margin-bottom: 16px;  /* jarak 1 spasi (sekitar 1 baris) dengan tabel */
+  font-size: 14px;      /* opsional: perbesar font */
+}
+
+#Laporan-Absensi #Laporan-Absensi-Table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto; /* kolom menyesuaikan proporsi */
+    word-wrap: break-word;
+    white-space: normal;
+    font-size: 13px;
+    margin: 0 auto; /* tabel di tengah horizontal */
+}
+
+#Laporan-Absensi #Laporan-Absensi-Table th {
+    border: 1px solid #ddd; 
+    padding: 8px; 
+    text-align: center; 
+    font-size: 12px; 
+    background: #2acfe8; 
+    color: #fff; 
+    overflow-wrap: break-word;
+    white-space: normal;   /* biarkan teks membungkus */
+    overflow: visible;     /* tampilkan konten yang melewati batas */
+    word-wrap: break-word; /* pecah kata panjang agar tetap muat */
+}
+
+#Laporan-Absensi #Laporan-Absensi-Table td {
+    border: 1px solid #ddd; 
+    padding: 8px; 
+    text-align: center; 
+    font-size: 11px; 
+    overflow-wrap: break-word;
+    white-space: normal;  
+    overflow: visible;    
+    word-wrap: break-word;
+}
+
+/* Kolom Nama & Jabatan rata kiri */
+#Laporan-Absensi #Laporan-Absensi-Table td:nth-child(2),
+#Laporan-Absensi #Laporan-Absensi-Table td:nth-child(3) {
+    text-align: left; 
+}
+
+/* Baris genap diberi warna */
+#Laporan-Absensi #Laporan-Absensi-Table tr:nth-child(even){
+    background: #f9f9f9;
+}
+
+/* Hover effect baris tabel */
+#Laporan-Absensi #Laporan-Absensi-Table tr:hover{
+    background: #f1f1f1;
+}
+
+/* =========================================================================================================
+    CSS PENGATURAN PASSWORD
+    Fungsinya:
+    - Styling container, tombol, form
+========================================================================================================= */
+/* ================================
+   Container & Konten Pengaturan Password
+================================ */
+#pengaturan-password {
+    background: #fff;
+    max-width: 700px;
+    width: 100%;
+    height: auto;        /* tinggi menyesuaikan konten */
+    padding: 40px 30px;
+    border-radius: 16px;
+    margin: 0 auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transition: box-shadow 0.3s ease; /* Hanya box-shadow */
+    will-change: box-shadow;
+}
+
+#pengaturan-password:hover {
+    box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+}
+
+/* ================================
+   Judul Halaman
+================================ */
+#pengaturan-password h2 {
+    text-align: center;
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* ================================
+   Deskripsi / Paragraf
+================================ */
+#pengaturan-password p {
+    text-align: center;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+/* ================================
+   Label Form
+================================ */
+#pengaturan-password label {
+    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* ================================
+   Form Group
+================================ */
+#pengaturan-password .form-group {
+    margin-bottom: 15px;
+}
+
+/* ================================
+   Input Text / Password
+================================ */
+#pengaturan-password input.form-control {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+/* ================================
+   Tombol Submit
+================================ */
+#pengaturan-password .btn-primary {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #4CAF50, #45A049);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+#pengaturan-password .btn-primary:hover {
+    background: linear-gradient(135deg, #45A049, #4CAF50);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#pengaturan-password .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* ================================
+   Alert Error
+================================ */
+#pengaturan-password .alert-danger {
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* ================================
+   Responsive (Layar Kecil)
+================================ */
+@media screen and (max-width: 400px) {
+    #pengaturan-password {
+        padding: 15px 20px;
+    }
+    #pengaturan-password .btn-home,
+    #pengaturan-password .btn-primary {
+        width: 100%;
+    }
+}
+
+</style>
+</head>
+
