@@ -428,7 +428,7 @@ async function loginUser() {
     const passwordHash = await hashPassword(password);
 
     try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbzhD3rAjd3cNXk5rPmo5GkzOSrBnbxnyXGfsTdGWvK7Lh7bEXKKNHnTEjp2zanBtT0_bA/exec", {
+        const res = await fetch("https://script.google.com/macros/s/AKfycbxODNluKur3mEZbcnUDnnnyFVP6_63MN1f5M2CH4XljlFNaJIlivOH2urmY-oypdOU6nQ/exec", {
             method: "POST",
             body: JSON.stringify({
                 action: "login",
