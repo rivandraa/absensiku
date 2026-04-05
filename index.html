@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<script>
+  (function() {
+    // 1. Cek apakah perangkat adalah Mobile (Android/iPhone)
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (!isMobile) {
+      // 2. Jika BUKAN HP, langsung lempar ke halaman peringatan
+      // Ganti 'peringatan.html' sesuai nama file yang Anda buat di GitHub
+      window.location.replace("peringatan.html");
+    }
+  })();
+</script>
 <meta charset="UTF-8">
 <base target="_top"> 
 <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
