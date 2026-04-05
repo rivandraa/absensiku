@@ -683,6 +683,11 @@ function resetGPSState() {
     }
     accDots = 0;
 
+    if (gpsWatcherId !== null) {
+        navigator.geolocation.clearWatch(gpsWatcherId);
+        gpsWatcherId = null;
+    }
+
     // reset area status
     areaErrorActive = false;
     lastInsideArea = null;
@@ -696,11 +701,6 @@ function resetGPSState() {
     lastGPSEnabled = null;
     targetLocation = null;
     lastTargetLocation = null;
-
-    if (gpsWatcherId !== null) {
-        navigator.geolocation.clearWatch(gpsWatcherId);
-        gpsWatcherId = null;
-    }
 
     // TAMBAHKAN INI: Pastikan flag fetch di-reset
     isFetchingLocation = false; 
@@ -724,6 +724,9 @@ document.getElementById("restartGPS").addEventListener("click", () => {
 
     // 2. Bersihkan semua interval dan watcher
     resetGPSState();
+    // Pastikan animasi lama berhenti
+    stopAccAnim();
+    stopGPSLoading();
 
     // 3. Beri jeda sedikit lebih lama (500ms) agar hardware GPS di HP sempat "istirahat"
     setTimeout(() => {
@@ -1016,10 +1019,6 @@ function startGPSMonitoring() {
             gpsWatcherId = null;
         }
 
-      // Pastikan animasi lama berhenti
-        stopAccAnim();
-        stopGPSLoading();
-      
         const MAX_ACCURACY = 30;
         const WATCH_OPTIONS = {
             enableHighAccuracy: true,
