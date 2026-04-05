@@ -224,32 +224,28 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
 
-     window.addEventListener('DOMContentLoaded', function() {
+window.addEventListener('DOMContentLoaded', function() {
   const overlay = document.getElementById('gatekeeper-overlay');
   const gateInfo = document.getElementById('gate-info');
-  const gateLoader = document.getElementById('gate-loader');
+  const loginPage = document.getElementById('LoginPage'); // Ambil elemen Login
 
-  // Fungsi deteksi HP
   const isMobile = /Android|iPhone/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // Jika HP: Tampilkan loading sebentar lalu buka aplikasi
-    gateLoader.style.display = "block";
-    gateInfo.innerHTML = "Memeriksa perangkat...";
-    
+    // JIKA HP: Tunggu sebentar lalu buka
     setTimeout(() => {
-      overlay.style.display = "none"; // Hilangkan penutup, aplikasi terbuka
-    }, 1500); // Delay 1.5 detik agar terlihat profesional
-
+      overlay.style.display = "none"; 
+      if (loginPage) loginPage.style.display = "block"; // Munculkan login
+    }, 1500);
   } else {
-    // Jika Desktop: Kunci layar selamanya
-    gateLoader.style.display = "none";
+    // JIKA LAPTOP: Kunci dan Sembunyikan yang lain!
+    overlay.style.display = "flex"; // Pastikan gerbang muncul
+    if (loginPage) loginPage.style.display = "none"; // SEMBUNYIKAN LOGIN PAGE
+    
     gateInfo.innerHTML = `
-      <span class="gate-error">AKSES DITOLAK!</span><br>
-      Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
+      <span style="color:red; font-weight:bold;">AKSES DITOLAK!</span><br>
+      Silakan buka melalui HP Android/iOS.
     `;
-    // Mencegah scroll agar user tidak bisa melihat isi aplikasi di bawahnya
-    document.body.style.overflow = "hidden";
   }
 });
      
