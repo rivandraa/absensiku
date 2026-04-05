@@ -14,40 +14,6 @@
 <!-- Popup Notifikasi -->
 <div id="popupNotif"></div>
 
-<div id="gatekeeper-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#2acfe8; z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;">
-  <div style="text-align:center; background:white; padding:30px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:360px; width:100%;">
-    <b style="font-size:18px; display:block; margin-bottom:5px;">PEMERINTAH DESA GALUNGAN</b>
-    <span style="font-size:13px; color:#1fa2ff; font-weight:bold; display:block; margin-bottom:20px;">LAYANAN ABSENSI ONLINE</span>
-    <p style="font-size:13px; color:#555; line-height:1.5;">Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.</p>
-    <div id="gate-message" style="font-weight:bold; margin-top:15px; color:#e74c3c;"></div>
-    <div style="margin-top:20px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:15px;">© 2026 Pemerintah Desa Galungan</div>
-  </div>
-</div>
-
-<script>
-(function() {
-  // 2. LOGIKA DETEKSI INSTAN
-  const isMobile = /Android|iPhone/i.test(navigator.userAgent);
-  const overlay = document.getElementById('gatekeeper-overlay');
-  const gateMessage = document.getElementById('gate-message');
-
-  if (!isMobile) {
-    // JIKA BUKAN HP: Tampilkan overlay dan SEMBUNYIKAN semua container lain
-    overlay.style.display = 'flex';
-    gateMessage.innerHTML = "AKSES DITOLAK!<br>Aplikasi ini hanya dapat dibuka melalui Smartphone (Android/iOS).";
-    
-    // Cari semua div container (Login & Absen) lalu sembunyikan paksa
-    const containers = document.querySelectorAll('.container');
-    containers.forEach(c => c.setAttribute('style', 'display:none !important'));
-    
-    // Kunci body agar tidak bisa discroll
-    document.body.style.overflow = 'hidden';
-  } else {
-    // JIKA HP: Pastikan overlay sembunyi
-    overlay.style.display = 'none';
-  }
-})();
-</script>
 <!-- =========================================================================================================
      BAGIAN LOGIN PAGE
      Fungsi: Menampilkan form login layanan absensi pegawai
@@ -238,8 +204,8 @@
 
 <!-- JQuery -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  
 <script>
-
 /* =========================================================================================================
     BAGIAN KODE TANGGAL
     Fungsi: Menampilkan tanggal dan waktu real-time pada halaman login dan absensi
