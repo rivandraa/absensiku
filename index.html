@@ -874,6 +874,54 @@ function checkUserLocation(lat, lon, status) {
     return insideArea;
 }
 
+  // ====== LISTENER STATUS ======
+document.addEventListener("DOMContentLoaded", () => {
+  const statusEl = document.getElementById("status");
+  if (!statusEl) return;
+
+  statusEl.addEventListener("change", e => {
+    const newStatus = e.target.value;
+    const gpsDiv = document.getElementById("gps");
+    const gpsHidden = document.getElementById("gpsHidden");
+    if (!gpsDiv) return;
+
+    // ambil isi div sebagai array baris
+    let lines = gpsDiv.innerText.split("\n");
+
+    // hapus baris lama status & hasil cek lokasi (pakai regex)
+    lines = lines.filter(line =>
+      !/^Status:/.test(line) &&
+      !/^✅/.test(line) &&
+      !/^❌/.test(line) &&
+      !/^ℹ️/.test(line) &&
+      !/^📏/.test(line)
+    );
+
+    // tambahkan status baru
+    if (newStatus === "Hadir" || newStatus === "WFH") {
+      if (gpsData[0] !== 0 && gpsData[1] !== 0 && targetLocation) {
+        const distance = getDistanceFromLatLonInMeters(
+          gpsData[0], gpsData[1],
+          targetLocation.lat, targetLocation.lon
+        );
+        const insideArea = distance <= RADIUS_LIMIT;
+
+
+        lines.push("ℹ️ Silakan tunggu, sedang menghitung jarak Anda.");
+      }
+    } else {
+      forceClosePopup();
+      areaErrorActive = false;
+      lastInsideArea = null;
+    }
+
+    // update isi div + hidden input
+    const newText = lines.join("\n");
+    gpsDiv.innerText = newText;
+    if (gpsHidden) gpsHidden.value = newText;
+  });
+});
+  
 // =====================================================
 // START GPS MONITORING
 // =====================================================
@@ -1504,56 +1552,7 @@ document.getElementById('reset').addEventListener('click', () => {
     showPopup("Reset Foto.", "warning");
 });
 
-/* =========================================================================================================
-Fungsi untuk menyembunyikan, lokasi dan kamera
-========================================================================================================= */
-document.addEventListener('DOMContentLoaded', function() {
-    const statusSelect = document.getElementById('status');
-    const koordinatSection = document.getElementById('titikKoordinatTampil').closest('.form-group');
-    const gpsSection = document.getElementById('gps').closest('.form-group');
-    const dokumentasiSection = document.getElementById('cameraContainer').parentElement;
-    const containerTombol = document.getElementById('containerTombolFoto');
 
-    // Element input & display
-    const inputKoordinat = document.getElementById('titikKoordinatTampil');
-    const displayGps = document.getElementById('gps');
-
-    function updateUI() {
-        const status = statusSelect.value;
-
-        if (status === "Izin" || status === "Sakit") {
-            // Sembunyikan elemen
-            koordinatSection.style.display = "none";
-            gpsSection.style.display = "none";
-            dokumentasiSection.style.display = "none";
-            containerTombol.style.setProperty("display", "none", "important");
-
-            // Matikan Kamera
-            const video = document.getElementById('video');
-            if (video && video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-        } else if (status === "Hadir" || status === "Dinas" || status === "WFH") {
-            // 1. Tampilkan kembali (Gunakan "" agar layout tetap rapi/sejajar kiri)
-            koordinatSection.style.display = ""; 
-            gpsSection.style.display = "";
-            dokumentasiSection.style.display = "";
-            containerTombol.style.removeProperty("display");
-            startWebcam();
-            
-            // 2. Reset tampilan ke state "Loading"
-            // Untuk Input menggunakan .value
-            if (inputKoordinat) inputKoordinat.value = "Sedang mengambil data...";
-            
-            // Untuk elemen display (div/span) menggunakan .innerText
-            if (displayGps) displayGps.innerText = "Sedang mencari lokasi...";
-        }
-    }
-
-    statusSelect.addEventListener('change', updateUI);
-    updateUI(); 
-});
 
 /* =========================================================================================================
     BAGIAN KODE LOGOUT, IDLE TIMER
