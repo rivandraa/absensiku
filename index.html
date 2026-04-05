@@ -1160,14 +1160,14 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
         );
     }
 
-    setTimeout(() => handleGPS(), 400);
+    setTimeout(() => handleGPS(), 200);
 
     if (!gpsMonitorInterval) {
         gpsMonitorInterval = setInterval(() => {
             if (!gpsSystemActive) return; // cek setiap 3 detik
             handleGPS();
             refreshTargetLocation();
-        }, 2500);
+        }, 2000);
     }
 
     if (navigator.permissions) {
