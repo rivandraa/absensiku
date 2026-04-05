@@ -1115,7 +1115,7 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
             if (!gpsSystemActive) return; // cek setiap 3 detik
             handleGPS();
             refreshTargetLocation();
-        }, 5000);
+        }, 2500);
     }
 
     if (navigator.permissions) {
