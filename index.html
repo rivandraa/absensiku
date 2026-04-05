@@ -702,82 +702,66 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-async function refreshTargetLocation(callback) {
-  // Simpan siapa yang sedang login SAAT INI
-  const userRequesting = (userData && userData.username) ? userData.username : null;
-  
-  if (!userRequesting) return;
+let isFetchingLocation = false; // Penanda agar tidak bentrok
 
-  // Ambil elemen DOM
+async function refreshTargetLocation(callback) {
+  const userRequesting = (userData && userData.username) ? userData.username : null;
+  if (!userRequesting || isFetchingLocation) return; // Jika sedang loading, abaikan klik baru
+
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // ✅ CEK STATUS DINAS (Tanpa menunggu server)
-  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
-    if (tampil) tampil.value = "-";
-    if (hidden) hidden.value = "-";
+  // Peringatan jika status kosong
+  if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
+    if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
     targetLocation = null;
-    lastTargetLocation = null;
-    
     if (typeof callback === "function") callback();
-    return; 
+    return;
   }
 
-  // JIKA BUKAN DINAS, ambil data dari Google Apps Script menggunakan fetch
-     try {
-       // 1. Ambil status saat ini untuk dikirim ke server
-       const statusKirim = encodeURIComponent(currentStatus); 
-       const userKirim = encodeURIComponent(userRequesting);
-     
-       // 2. TAMBAHKAN parameter &status= ke dalam URL fetch
-       const url = `${GAS_URL}?action=getTargetLocation&username=${userKirim}&status=${statusKirim}`;
-       
-       const response = await fetch(url);
-       const loc = await response.json();
+  // Bypass untuk Dinas/Izin/Sakit
+  if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+    if (tampil) tampil.value = "-";
+    targetLocation = null;
+    if (typeof callback === "function") callback();
+    return;
+  }
 
-    // PROTEKSI: Jika user sudah logout/ganti akun sebelum data sampai
-    if (!userData || userData.username !== userRequesting) return;
+  try {
+    isFetchingLocation = true; // KUNCI PROSES
+    if (tampil) tampil.value = "⌛ Mencari lokasi..."; // Beri tanda sedang loading
 
-    // Cek ulang status (takutnya user ganti status saat server sedang loading)
-    const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
-    if (statusTerbaru === "Dinas" || statusTerbaru === "Izin" || statusTerbaru === "Sakit") return;
+    const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
+    
+    const response = await fetch(url);
+    const loc = await response.json();
+
+    // Validasi apakah user masih di status yang sama saat data datang
+    const statusSaatIni = document.getElementById("status").value;
+    if (statusSaatIni !== currentStatus) {
+       isFetchingLocation = false;
+       return; // Batalkan jika user sudah ganti status lagi
+    }
 
     if (loc && loc.lat && loc.lon) {
-      const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-
-      // Logika update targetLocation
-      if (!lastTargetLocation || lastTargetLocation.lat !== newLocation.lat || lastTargetLocation.lon !== newLocation.lon) {
-        targetLocation = newLocation;
-        lastTargetLocation = newLocation;
-
-        if (gpsData[0] !== 0 && gpsData[1] !== 0) {
-          checkUserLocation(gpsData[0], gpsData[1], statusTerbaru);
-        }
-      }
-
-      const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
-
-      if (tampil) {
-        tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
-      }
+      targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+      const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
+      
+      if (tampil) tampil.value = loc.nama || koordinatMurni;
       if (hidden) hidden.value = koordinatMurni;
-
     } else {
-      targetLocation = null;
-      lastTargetLocation = null;
-      if (tampil) tampil.value = "Titik koordinat tidak ditentukan";
-      if (hidden) hidden.value = "";
+      if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
     }
 
   } catch (error) {
-    console.error("Gagal mengambil lokasi target:", error);
+    console.error("Gagal:", error);
     if (tampil) tampil.value = "Gagal memuat koordinat";
+  } finally {
+    isFetchingLocation = false; // BUKA KUNCI
+    if (typeof callback === "function") callback();
   }
-
-  // Jalankan callback di akhir proses (baik sukses maupun error)
-  if (typeof callback === "function") callback();
 }
 
 // =====================================================
