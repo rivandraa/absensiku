@@ -1887,91 +1887,151 @@ function closeLaporan_Absensi() {
  */
 let isopenPengaturanPasswordForm = false;
 
+/**
+ * Membuka Form Pengaturan Password
+ */
 function openPengaturanPasswordForm() {
-        // 🚫 Cegah double klik
     if (isopenPengaturanPasswordForm) {
-        showTempPopup("⏳ Sedang memuat halaman, harap tunggu...");
+        showTempPopup("⏳ Sedang memuat halaman, harap tunggu...", "warning");
         return;
     }
-
     isopenPengaturanPasswordForm = true;
 
     sessionStorage.setItem('page', 'Pengaturan_Password');
-
-    // Hentikan GPS dan webcam sementara
-    //stopGPSMonitoring();
-    resetFoto();
-    //stopWebcam();
+    if (typeof resetFoto === "function") resetFoto();
 
     showPopup("Memuat Pengaturan Password...", "loading");
 
-    // Ambil HTML form dari server
-    google.script.run.withSuccessHandler(function(html) {
-        $('#InnerPage').html(html).show();
-        $('#AbsensiPage').hide();
+    // Kerangka HTML Form (Dipindah ke Frontend)
+    const html = `
+        <div class="container mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">🔑 Ubah Password</h5>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closePengaturanPasswordForm()">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="Pengaturan_PasswordAlert" class="alert alert-danger mb-3" style="display:none; font-size: 13px;"></div>
+                    
+                    <input type="hidden" id="Pengaturan_PasswordUsername">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Password Lama</label>
+                        <input type="password" id="oldPassword" class="form-control" placeholder="Masukkan password lama">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Password Baru</label>
+                        <input type="password" id="newPassword" class="form-control" placeholder="Min. 6 karakter">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Konfirmasi Password Baru</label>
+                        <input type="password" id="confirmNewPassword" class="form-control" placeholder="Ulangi password baru">
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary w-100 mt-2" onclick="submitPengaturanPassword()">
+                        <i class="fas fa-save"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
 
-        // Isi username otomatis
-        $("#Pengaturan_PasswordUsername").val(userData.username || "");
-        forceClosePopup();
-        isopenPengaturanPasswordForm = false;
+    // Tampilkan Form
+    $('#InnerPage').html(html).show();
+    $('#AbsensiPage').hide();
 
-    }).getPengaturanPasswordHtml();
+    // Isi username otomatis dari session login
+    $("#Pengaturan_PasswordUsername").val(userData.username || "");
+    
+    if (typeof forceClosePopup === "function") forceClosePopup();
+    else if (typeof hidePopup === "function") hidePopup();
+    
+    isopenPengaturanPasswordForm = false;
 }
 
-// ================================
-// Fungsi Submit Ubah Password
-// ================================
 /**
  * Submit Form Ubah Password
  */
 async function submitPengaturanPassword() {
-    $('#Pengaturan_PasswordAlert').hide();
+    const alertBox = $('#Pengaturan_PasswordAlert');
+    alertBox.hide();
 
     const oldPass = $('#oldPassword').val();
     const newPass = $('#newPassword').val();
     const confirmPass = $('#confirmNewPassword').val();
     const username = $('#Pengaturan_PasswordUsername').val();
 
-    // Validasi password
+    // --- VALIDASI (Sesuai aslinya) ---
+    if (!oldPass || !newPass || !confirmPass) {
+        alertBox.html("Semua kolom harus diisi.").show();
+        return;
+    }
     if (newPass.length < 6) { 
-        $('#Pengaturan_PasswordAlert').html("Password baru minimal 6 karakter.").show();
+        alertBox.html("Password baru minimal 6 karakter.").show();
         return;
     }
     if (newPass !== confirmPass) {
-        $('#Pengaturan_PasswordAlert').html("Password baru dan konfirmasi tidak cocok.").show();
+        alertBox.html("Password baru dan konfirmasi tidak cocok.").show();
         return;
     }
     if (oldPass === newPass) {
-        $('#Pengaturan_PasswordAlert').html("Password baru tidak boleh sama dengan password lama.").show();
+        alertBox.html("Password baru tidak boleh sama dengan password lama.").show();
         return;
     }
 
-    // Hash password lama & baru
-    const oldPassHash = await hashPassword(oldPass); 
-    const newPassHash = await hashPassword(newPass); 
+    showPopup("Memverifikasi password...", "loading");
 
-    const data = {
-        username: username,
-        oldPassword: oldPassHash,
-        newPassword: newPassHash
-    };
+    try {
+        // Hash password (Gunakan fungsi hashPassword yang sudah Anda miliki)
+        const oldPassHash = await hashPassword(oldPass); 
+        const newPassHash = await hashPassword(newPass); 
 
-    showPopup("Memverifikasi dan mengubah password...", "loading");
+        const payload = {
+            action: "updatePassword",
+            username: username,
+            oldPassword: oldPassHash,
+            newPassword: newPassHash
+        };
 
-    // Kirim ke server / Apps Script
-    google.script.run.withSuccessHandler(res => {
+        // 🔥 Kirim ke GAS via POST
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        
+        const res = await response.json();
+
         // Reset input form
         $('#oldPassword, #newPassword, #confirmNewPassword').val('');
 
         if (res.status === "berhasil") {
-            showPopup("✅ Password berhasil diubah!", "success", null);
+            showPopup("✅ Password berhasil diubah!", "success", 3000);
+            setTimeout(closePengaturanPasswordForm, 2000);
         } else if (res.status === "salah_lama") {
             showPopup("⚠️ Password lama salah!", "error");
-            $('#Pengaturan_PasswordAlert').html("Password lama yang Anda masukkan salah.").show();
+            alertBox.html("Password lama yang Anda masukkan salah.").show();
         } else {
-            showPopup("⚠️ Gagal mengubah password. Hubungi Admin.", "error");
+            showPopup("⚠️ Gagal mengubah password.", "error");
         }
-    }).updatePassword(data);
+
+    } catch (err) {
+        showPopup("Terjadi kesalahan koneksi", "error");
+        console.error(err);
+    }
+}
+
+/**
+ * Menutup form pengaturan password
+ */
+function closePengaturanPasswordForm() {
+    sessionStorage.setItem('page', 'absen');
+    $('#InnerPage').hide().html('');
+    $('#AbsensiPage').show();
+    if (typeof resetFoto === "function") resetFoto();
 }
 
 /**
