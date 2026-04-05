@@ -706,8 +706,6 @@ let isFetchingLocation = false; // Penanda agar tidak bentrok
 
 async function refreshTargetLocation(callback) {
   const userRequesting = (userData && userData.username) ? userData.username : null;
-  
-  // Jika data user tidak ada atau sedang proses fetch, abaikan
   if (!userRequesting || isFetchingLocation) return; 
 
   const statusInput = document.getElementById("status");
@@ -715,7 +713,6 @@ async function refreshTargetLocation(callback) {
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // 1. Validasi Status Kosong
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
     targetLocation = null;
@@ -723,7 +720,6 @@ async function refreshTargetLocation(callback) {
     return;
   }
 
-  // 2. Bypass untuk Dinas/Izin/Sakit (Instan tanpa server)
   if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
@@ -732,20 +728,13 @@ async function refreshTargetLocation(callback) {
     return;
   }
 
-  // 3. Proses Ambil Data (Hadir/WFH)
   try {
     isFetchingLocation = true; 
-    
-    // --- BAGIAN INI DIHAPUS/DIKOMENTARI AGAR TIDAK ADA TEKS LOADING ---
-    // if (tampil) tampil.value = "⌛ Mencari lokasi..."; 
-    // ----------------------------------------------------------------
-
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
     const loc = await response.json();
 
-    // Validasi: Apakah user masih di status yang sama saat data datang?
     const statusSaatIni = document.getElementById("status").value;
     if (statusSaatIni !== currentStatus) {
        isFetchingLocation = false;
@@ -756,10 +745,16 @@ async function refreshTargetLocation(callback) {
       targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
       const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
       
-      // Update tampilan SECARA LANGSUNG saat data tiba
       if (tampil) tampil.value = loc.nama || koordinatMurni;
       if (hidden) hidden.value = koordinatMurni;
       
+      // BAGIAN PEMICU HITUNG JARAK OTOMATIS TELAH DIHAPUS SESUAI PERMINTAAN
+      
+    } else {
+      if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
+      targetLocation = null;
+    }
+
   } catch (error) {
     console.error("Gagal mengambil lokasi:", error);
     if (tampil) tampil.value = "Gagal memuat koordinat";
@@ -768,11 +763,6 @@ async function refreshTargetLocation(callback) {
     if (typeof callback === "function") callback();
   }
 }
-
-// LISTENER: Memicu fungsi saat dropdown berubah
-document.getElementById("status").addEventListener("change", function() {
-    refreshTargetLocation();
-});
 
 // =====================================================
 // CEK JARAK KE TITIK TARGET (hanya untuk HADIR)
