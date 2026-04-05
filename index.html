@@ -706,66 +706,77 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-let isFetchingLocation = false; // Penanda agar tidak bentrok
+let lastRequestId = 0; // Melacak ID permintaan fetch terakhir
+let targetLocation = null; // Menyimpan koordinat target aktif
+let lastTargetLocation = null;
 
 async function refreshTargetLocation(callback) {
-  const userRequesting = (userData && userData.username) ? userData.username : null;
-  if (!userRequesting || isFetchingLocation) return; // Jika sedang loading, abaikan klik baru
+    const userRequesting = (userData && userData.username) ? userData.username : null;
+    if (!userRequesting) return;
 
-  const statusInput = document.getElementById("status");
-  const currentStatus = statusInput ? statusInput.value : "";
-  const tampil = document.getElementById("titikKoordinatTampil");
-  const hidden = document.getElementById("titikKoordinat");
+    const statusInput = document.getElementById("status");
+    const currentStatus = statusInput ? statusInput.value : "";
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const hidden = document.getElementById("titikKoordinat");
 
-  // Peringatan jika status kosong
-  if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
-    if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
-    targetLocation = null;
-    if (typeof callback === "function") callback();
-    return;
-  }
+    // ID unik untuk mencegah masalah kedip-kedip (Race Condition)
+    const currentRequestId = ++lastRequestId;
 
-  // Bypass untuk Dinas/Izin/Sakit
-  if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-    if (tampil) tampil.value = "-";
-    targetLocation = null;
-    if (typeof callback === "function") callback();
-    return;
-  }
-
-  try {
-    isFetchingLocation = true; // KUNCI PROSES
-    if (tampil) tampil.value = "⌛ Mencari lokasi..."; // Beri tanda sedang loading
-
-    const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
-    
-    const response = await fetch(url);
-    const loc = await response.json();
-
-    // Validasi apakah user masih di status yang sama saat data datang
-    const statusSaatIni = document.getElementById("status").value;
-    if (statusSaatIni !== currentStatus) {
-       isFetchingLocation = false;
-       return; // Batalkan jika user sudah ganti status lagi
+    // 1. Validasi jika status belum dipilih
+    if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
+        if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
+        targetLocation = null;
+        if (typeof callback === "function") callback();
+        return;
     }
 
-    if (loc && loc.lat && loc.lon) {
-      targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-      const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
-      
-      if (tampil) tampil.value = loc.nama || koordinatMurni;
-      if (hidden) hidden.value = koordinatMurni;
-    } else {
-      if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
+    // 2. Bypass untuk status yang tidak butuh radius (Dinas/Izin/Sakit)
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        targetLocation = null;
+        if (typeof callback === "function") callback();
+        return;
     }
 
-  } catch (error) {
-    console.error("Gagal:", error);
-    if (tampil) tampil.value = "Gagal memuat koordinat";
-  } finally {
-    isFetchingLocation = false; // BUKA KUNCI
-    if (typeof callback === "function") callback();
-  }
+    try {
+        if (tampil) tampil.value = "⌛ Sinkronisasi lokasi...";
+
+        const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
+        
+        const response = await fetch(url);
+        const loc = await response.json();
+
+        // ANTI-KEDIP: Cek apakah ini masih permintaan terbaru
+        if (currentRequestId !== lastRequestId) return; 
+
+        if (loc && loc.lat && loc.lon) {
+            targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+            const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
+            
+            // Update input tampilan dengan Nama Lokasi (Kantor/Rumah)
+            if (tampil) tampil.value = loc.nama || koordinatMurni;
+            if (hidden) hidden.value = koordinatMurni;
+            
+            // Hitung ulang jarak jika data GPS sudah ada
+            if (gpsData && gpsData[0] !== 0) {
+                checkUserLocation(gpsData[0], gpsData[1], currentStatus);
+            }
+        } else {
+            if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
+            targetLocation = null;
+        }
+
+    } catch (error) {
+        if (currentRequestId === lastRequestId) {
+            console.error("Fetch error:", error);
+            if (tampil) tampil.value = "Gagal memuat koordinat";
+        }
+    } finally {
+        if (currentRequestId === lastRequestId && typeof callback === "function") {
+            callback();
+        }
+    }
 }
 
 // =====================================================
@@ -816,50 +827,48 @@ function checkUserLocation(lat, lon, status) {
 
 // ====== LISTENER STATUS ======
 document.addEventListener("DOMContentLoaded", () => {
-  const statusEl = document.getElementById("status");
-  if (!statusEl) return;
+    const statusEl = document.getElementById("status");
+    if (!statusEl) return;
 
-  statusEl.addEventListener("change", e => {
-    const newStatus = e.target.value;
-    const gpsDiv = document.getElementById("gps");
-    const gpsHidden = document.getElementById("gpsHidden");
-    if (!gpsDiv) return;
+    statusEl.addEventListener("change", async (e) => {
+        const newStatus = e.target.value;
+        const gpsDiv = document.getElementById("gps");
+        const gpsHidden = document.getElementById("gpsHidden");
 
-    // ambil isi div sebagai array baris
-    let lines = gpsDiv.innerText.split("\n");
+        // --- TAHAP 1: MEMBERSIHKAN TAMPILAN (UI) ---
+        if (gpsDiv) {
+            let lines = gpsDiv.innerText.split("\n");
+            // Hapus baris status lama dan hasil cek (ikon centang/silang)
+            lines = lines.filter(line =>
+                !/^Status:/.test(line) &&
+                !/^[✅❌ℹ️📏]/.test(line)
+            );
+            gpsDiv.innerText = lines.join("\n");
+        }
 
-    // hapus baris lama status & hasil cek lokasi (pakai regex)
-    lines = lines.filter(line =>
-      !/^Status:/.test(line) &&
-      !/^✅/.test(line) &&
-      !/^❌/.test(line) &&
-      !/^ℹ️/.test(line) &&
-      !/^📏/.test(line)
-    );
+        // --- TAHAP 2: MENGAMBIL KOORDINAT BARU (FETCH) ---
+        // Panggil fungsi refreshTargetLocation dan tunggu sampai selesai
+        await refreshTargetLocation();
 
-    // tambahkan status baru
-    if (newStatus === "Hadir" || newStatus === "WFH") {
-      if (gpsData[0] !== 0 && gpsData[1] !== 0 && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(
-          gpsData[0], gpsData[1],
-          targetLocation.lat, targetLocation.lon
-        );
-        const insideArea = distance <= RADIUS_LIMIT;
-
-
-        lines.push("ℹ️ Silakan tunggu, sedang menghitung jarak Anda.");
-      }
-    } else {
-      forceClosePopup();
-      areaErrorActive = false;
-      lastInsideArea = null;
-    }
-
-    // update isi div + hidden input
-    const newText = lines.join("\n");
-    gpsDiv.innerText = newText;
-    if (gpsHidden) gpsHidden.value = newText;
-  });
+        // --- TAHAP 3: UPDATE STATUS TEKS DI GPS DIV ---
+        if (gpsDiv) {
+            let lines = gpsDiv.innerText.split("\n");
+            
+            if (newStatus === "Hadir" || newStatus === "WFH") {
+                // Beri indikasi sedang menghitung jarak setelah koordinat didapat
+                lines.push("ℹ️ Sedang menghitung jarak Anda...");
+            } else {
+                // Jika Dinas/Izin/Sakit, bersihkan popup dan error radius
+                if (typeof forceClosePopup === "function") forceClosePopup();
+                areaErrorActive = false;
+                lastInsideArea = null;
+            }
+            
+            const newText = lines.join("\n");
+            gpsDiv.innerText = newText;
+            if (gpsHidden) gpsHidden.value = newText;
+        }
+    });
 });
 
 // =====================================================
