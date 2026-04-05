@@ -702,7 +702,7 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-// 1. Pastikan variabel ID permintaan ada di lingkup global
+// Pastikan variabel ID permintaan ada di lingkup global (paling atas script)
 let lastRequestId = 0; 
 
 async function refreshTargetLocation(callback) {
@@ -714,22 +714,15 @@ async function refreshTargetLocation(callback) {
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // 2. Gunakan ID unik agar data lama tidak menimpa data baru (Anti-Kedip)
+  // Gunakan ID unik agar data lama tidak menimpa data baru (Anti-Kedip)
   const currentRequestId = ++lastRequestId;
 
   // =============================================================
-  // TAHAP PEMBERSIHAN INSTAN (Solusi agar lokasi lama tidak muncul)
+  // RESET INTERNAL (Tanpa mengubah teks di layar menjadi "Loading")
   // =============================================================
   targetLocation = null; 
   lastTargetLocation = null;
-  
-  // Langsung kosongkan input hidden agar tidak ada data sampah
-  if (hidden) hidden.value = "";
-  
-  // Tampilkan pesan loading atau kosongkan tampilan segera
-  if (tampil) {
-    tampil.value = "Sedang mengambil data..."; 
-  }
+  if (hidden) hidden.value = ""; 
   // =============================================================
 
   // ✅ CEK STATUS DINAS/IZIN/SAKIT (Tanpa menunggu server)
@@ -740,7 +733,7 @@ async function refreshTargetLocation(callback) {
     return; 
   }
 
-  // JIKA BUKAN DINAS, ambil data dari Google Apps Script menggunakan fetch
+  // JIKA HADIR/WFH, ambil data menggunakan fetch
   try {
     const statusKirim = encodeURIComponent(currentStatus); 
     const userKirim = encodeURIComponent(userRequesting);
@@ -749,11 +742,11 @@ async function refreshTargetLocation(callback) {
     const response = await fetch(url);
     const loc = await response.json();
 
-    // PROTEKSI: Jika user sudah ganti status lagi sebelum data ini sampai, ABRESIKAN
+    // PROTEKSI: Cek apakah user sudah ganti status lagi atau ganti akun
     if (currentRequestId !== lastRequestId) return;
     if (!userData || userData.username !== userRequesting) return;
 
-    // Cek ulang status terbaru
+    // Cek ulang status terbaru di dropdown
     const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
     if (statusTerbaru === "Dinas" || statusTerbaru === "Izin" || statusTerbaru === "Sakit") return;
 
@@ -767,12 +760,13 @@ async function refreshTargetLocation(callback) {
       const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
 
       if (tampil) {
+        // Tampilan akan langsung berubah dari Lokasi A ke Lokasi B saat data tiba
         tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
       }
       if (hidden) hidden.value = koordinatMurni;
 
       // Segera hitung jarak jika GPS user sudah aktif
-      if (gpsData && gpsData[0] !== 0) {
+      if (typeof gpsData !== 'undefined' && gpsData[0] !== 0) {
         checkUserLocation(gpsData[0], gpsData[1], statusTerbaru);
       }
 
