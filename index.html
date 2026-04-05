@@ -14,6 +14,24 @@
 <!-- Popup Notifikasi -->
 <div id="popupNotif"></div>
 
+<div id="gatekeeper-overlay">
+  <div class="gate-container">
+    <div id="gate-loader" class="gate-spinner"></div>
+    
+    <div class="gate-title">PEMERINTAH DESA GALUNGAN</div>
+    <div class="gate-subtitle">LAYANAN ABSENSI ONLINE</div>
+    
+    <div class="gate-description">
+      Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.
+    </div>
+
+    <div id="gate-info"></div>
+
+    <div class="gate-footer">
+      © 2026 Pemerintah Desa Galungan
+    </div>
+  </div>
+</div>
 <!-- =========================================================================================================
      BAGIAN LOGIN PAGE
      Fungsi: Menampilkan form login layanan absensi pegawai
@@ -206,6 +224,35 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
 
+     window.addEventListener('DOMContentLoaded', function() {
+  const overlay = document.getElementById('gatekeeper-overlay');
+  const gateInfo = document.getElementById('gate-info');
+  const gateLoader = document.getElementById('gate-loader');
+
+  // Fungsi deteksi HP
+  const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // Jika HP: Tampilkan loading sebentar lalu buka aplikasi
+    gateLoader.style.display = "block";
+    gateInfo.innerHTML = "Memeriksa perangkat...";
+    
+    setTimeout(() => {
+      overlay.style.display = "none"; // Hilangkan penutup, aplikasi terbuka
+    }, 1500); // Delay 1.5 detik agar terlihat profesional
+
+  } else {
+    // Jika Desktop: Kunci layar selamanya
+    gateLoader.style.display = "none";
+    gateInfo.innerHTML = `
+      <span class="gate-error">AKSES DITOLAK!</span><br>
+      Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
+    `;
+    // Mencegah scroll agar user tidak bisa melihat isi aplikasi di bawahnya
+    document.body.style.overflow = "hidden";
+  }
+});
+     
 /* =========================================================================================================
     BAGIAN KODE TANGGAL
     Fungsi: Menampilkan tanggal dan waktu real-time pada halaman login dan absensi
