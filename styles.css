@@ -1,24 +1,33 @@
 <style>
 //Bagian Peringatan
 /* --- KODE WAJIB AGAR GERBANG MENUTUPI LAYAR --- */
+/* --- INI KUNCI AGAR MENUTUPI SELURUH LAYAR --- */
 #gatekeeper-overlay {
-  position: fixed;      /* Mengunci posisi agar tetap di layar meski di-scroll */
-  top: 0;
-  left: 0;
-  width: 100vw;         /* Lebar penuh layar */
-  height: 100vh;        /* Tinggi penuh layar */
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  z-index: 99999;       /* Angka tertinggi agar berada di depan Login Page */
-  display: flex;        /* Untuk meratakan konten ke tengah */
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 50px;
-  box-sizing: border-box;
+    position: fixed;      /* WAJIB: Agar menempel di layar */
+    top: 0;
+    left: 0;
+    width: 100%;          /* WAJIB: Memenuhi lebar layar */
+    height: 100vh;        /* WAJIB: Memenuhi tinggi layar */
+    background: #2acfe8;  /* Warna background yang sama dengan body Anda */
+    z-index: 99999;       /* WAJIB: Agar berada di depan form login */
+    
+    /* Agar konten peringatan berada di tengah */
+    display: flex;
+    justify-content: center;
+    align-items: center;  
+    padding: 20px;
+    box-sizing: border-box;
 }
 
-/* Memastikan Login Page dan Absensi Page sembunyi di awal jika bukan HP */
-.container {
-  display: none; 
+/* Memastikan konten di dalamnya tetap rapi */
+.gate-container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    max-width: 350px;
+    width: 100%;
 }
 
 /* Styling Kontainer Gerbang */
