@@ -1003,6 +1003,7 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
                                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
                         }
+                    }
 
                 updateGPSDisplay(displayText);
             }, 500);
@@ -1063,6 +1064,7 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
                                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
                         }
+                    }
 
                     updateGPSDisplay(displayText);
                 }
