@@ -1472,13 +1472,12 @@ fetch(GAS_URL, {
 })
 .then(res => res.json())
 .then(serverTime => {
+
     fotoTimestamp = serverTime.iso;
 
     const tanggalServer = serverTime.tanggal;
     const jamServer = serverTime.waktu; 
     const hariServer = serverTime.hari || "";
-    const jamTampil = jamServer + " WITA";
-    const waktuFullServer = serverTime.full;
     const gpsText = `${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`;
 
     // ==========================================
