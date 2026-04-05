@@ -706,6 +706,9 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
+// Tambahkan variabel pengunci di luar fungsi (global)
+let lastRequestId = 0; 
+
 async function refreshTargetLocation(callback) {
   const userRequesting = (userData && userData.username) ? userData.username : null;
   if (!userRequesting) return;
@@ -715,64 +718,80 @@ async function refreshTargetLocation(callback) {
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // =============================================================
-  // 1. CEK JIKA STATUS BELUM DIPILIH (KOSONG)
-  // =============================================================
+  // BUAT ID UNIK untuk setiap permintaan agar tidak bentrok
+  const currentRequestId = ++lastRequestId;
+
+  // --- LANGKAH PENTING: RESET TAMPILAN & VARIABEL SEBELUM FETCH ---
+  // Ini mencegah lokasi lama (Kantor) tampil saat sedang loading WFH
+  targetLocation = null; 
+  lastTargetLocation = null;
+  
+  if (hidden) hidden.value = "";
+  // ---------------------------------------------------------------
+
+  // 1. CEK STATUS KOSONG
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
-    if (hidden) hidden.value = "";
-    targetLocation = null;
-    lastTargetLocation = null;
-    
     if (typeof callback === "function") callback();
-    return; // Berhenti di sini, jangan fetch ke server
+    return;
   }
 
-  // ✅ CEK STATUS DINAS/IZIN/SAKIT (Tetap seperti sebelumnya)
-  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
+  // 2. CEK STATUS DINAS/IZIN/SAKIT
+  if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
-    targetLocation = null;
-    lastTargetLocation = null;
     if (typeof callback === "function") callback();
     return; 
   }
 
-  // 2. JIKA STATUS SUDAH DIPILIH (HADIR/WFH), Ambil data dari server
+  // 3. PROSES AMBIL DATA (HADIR/WFH)
   try {
+    // Tampilkan status loading agar user tahu proses sedang berjalan
+    if (tampil) tampil.value = "⌛ Sinkronisasi lokasi...";
+
     const statusKirim = encodeURIComponent(currentStatus);
     const userKirim = encodeURIComponent(userRequesting);
-    
-    // Pastikan menyertakan &status agar server tahu harus ambil kolom yang mana
     const url = `${GAS_URL}?action=getTargetLocation&username=${userKirim}&status=${statusKirim}`;
     
     const response = await fetch(url);
     const loc = await response.json();
 
+    // VALIDASI: Jika user sudah klik tombol lain sebelum data ini sampai, ABRESIKAN.
+    if (currentRequestId !== lastRequestId) return;
     if (!userData || userData.username !== userRequesting) return;
 
     if (loc && loc.lat && loc.lon) {
       const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+      
+      // Update variabel global dengan data BARU
       targetLocation = newLocation;
       lastTargetLocation = newLocation;
 
       const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
+      
       if (tampil) {
         tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
       }
       if (hidden) hidden.value = koordinatMurni;
 
+      // Langsung hitung jarak jika GPS user sudah aktif
+      if (typeof gpsData !== 'undefined' && gpsData[0] !== 0) {
+        checkUserLocation(gpsData[0], gpsData[1], currentStatus);
+      }
+
     } else {
-      targetLocation = null;
       if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
-      if (hidden) hidden.value = "";
     }
   } catch (error) {
     console.error("Error:", error);
-    if (tampil) tampil.value = "Gagal memuat koordinat";
+    if (currentRequestId === lastRequestId && tampil) {
+      tampil.value = "Gagal memuat koordinat";
+    }
   }
 
-  if (typeof callback === "function") callback();
+  if (typeof callback === "function" && currentRequestId === lastRequestId) {
+    callback();
+  }
 }
 
 // =====================================================
