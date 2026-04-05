@@ -719,7 +719,7 @@ async function refreshTargetLocation(callback) {
   const hidden = document.getElementById("titikKoordinat");
 
   // ✅ CEK STATUS DINAS (Tanpa menunggu server)
-  if (currentStatus === "Dinas") {
+  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
     targetLocation = null;
