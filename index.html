@@ -67,7 +67,7 @@
      - Menampilkan tanggal dan waktu real-time di div #tanggalWaktuAbsen
      - Form absensi mencakup:
          - Nama & Jabatan (readonly)
-         - Status Absen (Hadir, Izin, Sakit, Dinas)
+         - Status Absen (Hadir, Izin, Sakit, Dinas, WFH)
          - Keterangan (textarea, auto-resize)
          - GPS (textarea readonly, diisi otomatis)
          - Dokumentasi Foto (video preview, foto capture, reset)
@@ -1333,10 +1333,11 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
   }
 
   // 3. VALIDASI AREA ABSEN (Jarak)
-  if (status === "Hadir") {
+  // Validasi ini sekarang berlaku untuk status HADIR maupun WFH
+  if (status === "Hadir" || status === "WFH") {
     const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
     if (!insideArea) {
-      showPopup("❌ Anda di luar area absensi.", "error");
+      showPopup("❌ Anda di luar area absensi (" + status + ").", "error");
       vibrateAlertShort();
       isSnapping = false;
       return;
@@ -1706,7 +1707,7 @@ async function submitAbsensiForm() {
     }
 
     // Validasi Foto (Hadir/Dinas)
-    const wajibFoto = ["hadir", "dinas"].includes(status);
+    const wajibFoto = ["hadir", "dinas", "WFH"].includes(status);
     if (wajibFoto && !fotoData) {
         showPopup("Foto Kehadiran wajib untuk status " + statusRaw + "!", "warning");
         vibrateAlertShort();
@@ -1726,7 +1727,7 @@ async function submitAbsensiForm() {
     }
 
     // Validasi Radius (Khusus Hadir)
-    if (status === "hadir") {
+    if (status === "hadir"|| status === "WFH") {
         const [lat, lon] = gpsData;
         const insideArea = checkUserLocation(lat, lon, statusRaw);
         if (!insideArea) {
