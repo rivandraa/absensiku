@@ -707,8 +707,6 @@ function stopGPSLoading() {
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
 let lastRequestId = 0; // Melacak ID permintaan fetch terakhir
-let targetLocation = null; // Menyimpan koordinat target aktif
-let lastTargetLocation = null;
 
 async function refreshTargetLocation(callback) {
     const userRequesting = (userData && userData.username) ? userData.username : null;
