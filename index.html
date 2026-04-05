@@ -706,18 +706,6 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-async function refreshTargetLocation(callback) {
-  const userRequesting = (userData && userData.username) ? userData.username : null;
-  if (!userRequesting) return;
-
-  const statusInput = document.getElementById("status");
-  const currentStatus = statusInput ? statusInput.value : "";
-  const tampil = document.getElementById("titikKoordinatTampil");
-  const hidden = document.getElementById("titikKoordinat");
-
-  // =============================================================
-  // 1. CEK JIKA STATUS BELUM DIPILIH (KOSONG)
-  // =============================================================
 let isFetchingLocation = false; // Penanda agar tidak bentrok
 
 async function refreshTargetLocation(callback) {
