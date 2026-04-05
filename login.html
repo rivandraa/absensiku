@@ -2,8 +2,98 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
+    <title>Absensi Pemdes Galungan</title>
+    <style>
+        /* --- CSS UNTUK TAMPILAN GERBANG & LOGIN --- */
+        body {
+            margin: 0; padding: 0; min-height: 100vh;
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            display: flex; justify-content: center; align-items: flex-start;
+            padding-top: 30px; box-sizing: border-box;
+        }
+
+        /* Container Utama */
+        .container {
+            text-align: center; backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px; background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            width: 90%; max-width: 350px;
+        }
+
+        /* Spinner */
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid #2acfe8;
+            border-radius: 50%; width: 35px; height: 35px;
+            animation: spin 1s linear infinite; margin: 0 auto 20px auto;
+            display: none; /* Muncul lewat JS */
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Sembunyikan Login Page secara default */
+        #login-page { display: none; }
+        
+        .title { font-weight: 700; font-size: 18px; color: #2c3e50; }
+        .subtitle { font-size: 13px; font-weight: 700; color: #1fa2ff; text-transform: uppercase; margin-bottom: 20px; }
+        .error-text { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="gatekeeper-page" class="container">
+        <div id="loader" class="spinner"></div>
+        <div class="title">PEMERINTAH DESA GALUNGAN</div>
+        <div class="subtitle">LAYANAN ABSENSI ONLINE</div>
+        <p id="gate-desc" style="font-size:13px; color:#555; line-height:1.6;">
+            Sistem absensi digital untuk meningkatkan disiplin dan efisiensi Aparatur Pemerintah Desa.
+        </p>
+        <div id="status-msg" style="font-size:13px; font-weight:600; margin-top:10px;">Memeriksa Perangkat...</div>
+    </div>
+
+    <div id="login-page" class="container">
+        <div class="title">LOGIN ABSENSI</div>
+        <hr>
+        <input type="text" placeholder="Username" style="width:100%; margin-top:10px; padding:8px;">
+        <input type="password" placeholder="Password" style="width:100%; margin-top:10px; padding:8px;">
+        <button style="width:100%; margin-top:15px; padding:10px; background:#1fa2ff; color:white; border:none; border-radius:5px;">MASUK</button>
+    </div>
+
+    <script>
+        function isMobile() {
+            return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+
+        window.onload = function() {
+            const gatePage = document.getElementById('gatekeeper-page');
+            const loginPage = document.getElementById('login-page');
+            const loader = document.getElementById('loader');
+            const msg = document.getElementById('status-msg');
+
+            if (isMobile()) {
+                // JIKA HP: Tampilkan spinner di Gerbang
+                loader.style.display = "block";
+                msg.innerHTML = "Akses Disetujui.<br>Membuka Aplikasi...";
+
+                // Setelah 2.5 detik, hancurkan gerbang dan munculkan login
+                setTimeout(function() {
+                    gatePage.style.display = "none"; // Hapus gerbang
+                    loginPage.style.display = "block"; // Munculkan form login
+                }, 2500);
+
+            } else {
+                // JIKA LAPTOP: Tetap di Gerbang dengan pesan error
+                loader.style.display = "none";
+                msg.innerHTML = `<span class="error-text">AKSES DITOLAK!</span><br>Gunakan Smartphone.`;
+                document.getElementById('gate-desc').style.display = "none";
+            }
+        };
+    </script>
+
 <base target="_top"> 
-<meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
+
 <!-- Bootstrap CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
