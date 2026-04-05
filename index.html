@@ -2,16 +2,38 @@
 <html lang="id">
 <head>
 <script>
-  (function() {
-    // 1. Cek apakah perangkat adalah Mobile (Android/iPhone)
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
 
-    if (!isMobile) {
-      // 2. Jika BUKAN HP, langsung lempar ke halaman peringatan
-      // Ganti 'peringatan.html' sesuai nama file yang Anda buat di GitHub
-      window.location.replace("peringatan.html");
+  window.onload = function() {
+    const infoStatus = document.getElementById('info-status');
+    const loader = document.getElementById('loader');
+
+    if (isMobileDevice()) {
+      // 1. Tampilkan spinner agar terlihat sedang memproses
+      loader.style.display = "block";
+      infoStatus.innerHTML = "Memverifikasi Perangkat...";
+
+      // 2. Arahkan ke file index.html yang ada di GitHub Pages Anda
+      // Karena file ini (peringatan/main) dan index.html biasanya satu folder,
+      // cukup tuliskan nama filenya saja.
+      const urlLogin = "index.html"; 
+
+      // 3. Beri jeda 2 detik agar pesan "Pemerintah Desa Galungan" terbaca
+      setTimeout(function() {
+        window.location.replace(urlLogin);
+      }, 2000); 
+
+    } else {
+      // Jika Laptop/Desktop: Tampilkan pesan blokir
+      loader.style.display = "none";
+      infoStatus.innerHTML = `
+        <span class="error-text" style="color: #e74c3c;">AKSES DITOLAK!</span><br>
+        Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
+      `;
     }
-  })();
+  };
 </script>
 <meta charset="UTF-8">
 <base target="_top"> 
