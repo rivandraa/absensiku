@@ -1307,26 +1307,32 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  // =============================================================
-  // VALIDASI GPS & KOORDINAT TARGET (Tambahan Sesuai Permintaan)
-  // =============================================================
-  const koordinatValue = tampil ? tampil.value : "";
-
-  if (
-    (gpsData[0] === 0 && gpsData[1] === 0) ||
-    animatingGPS ||
-    improvingAccuracy ||
-    koordinatValue.includes("Sedang mengambil") ||
-    koordinatValue.includes("Mencari lokasi") ||
-    (typeof isFetchingLocation !== 'undefined' && isFetchingLocation)
-  ) {
-    showPopup("⚠️ Tunggu hingga koordinat target dan GPS siap.", "warning");
+// 1. VALIDASI GPS HP (Sinyal/Akurasi Perangkat)
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
     vibrateAlertShort();
     isSnapping = false;
     return;
   }
 
-  // VALIDASI AREA ABSEN
+  // 2. VALIDASI DATA SPREADSHEET (Koordinat Target Absensi)
+  // Hanya cek ini jika status bukan Dinas/Izin/Sakit
+  if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+    const koordinatValue = tampil ? tampil.value : "";
+    
+    if (
+      koordinatValue.includes("Sedang mengambil") || 
+      koordinatValue.includes("Mencari lokasi") || 
+      (typeof isFetchingLocation !== 'undefined' && isFetchingLocation)
+    ) {
+      showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
+      vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+
+  // 3. VALIDASI AREA ABSEN (Jarak)
   if (status === "Hadir") {
     const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
     if (!insideArea) {
@@ -1351,7 +1357,7 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas") ? statusAbsen.toUpperCase() : "";
+  const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
   const ketElement = document.getElementById("keterangan");
   const keteranganUser = ketElement ? ketElement.value.trim() : "";
   
