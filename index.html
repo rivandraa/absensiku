@@ -1253,22 +1253,26 @@ function resetFoto(showNotif = false) {
 let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => { // Tambahkan async di sini
+document.getElementById('snap').addEventListener('click', async () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
     return;
   }
-  
-  // --- 1. VALIDASI AWAL (Lengkap) ---
+
+  // --- 1. AMBIL ELEMEN DOM ---
   const video = document.getElementById('video');
   const statusInput = document.getElementById("status");
   const status = statusInput ? statusInput.value : "";
   const ketField = document.getElementById("keterangan");
   const keterangan = ketField ? ketField.value.trim() : "";
   const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+  
+  // Ambil elemen tampil di sini agar tidak error
+  const tampil = document.getElementById("titikKoordinatTampil");
   const koordinatValue = tampil ? tampil.value : "";
 
+  // --- 2. VALIDASI DASAR (Status & Keterangan) ---
   if (!status) {
     showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
     vibrateAlertShort();
@@ -1284,6 +1288,32 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
+  // --- 3. VALIDASI KESIAPAN SISTEM (GPS & KOORDINAT) ---
+  // Kita gabungkan semua pengecekan "Kesiapan" di sini
+  if (
+    (gpsData[0] === 0 && gpsData[1] === 0) || 
+    animatingGPS || 
+    improvingAccuracy || 
+    koordinatValue.includes("Sedang mengambil") || 
+    koordinatValue.includes("Mencari lokasi") ||
+    isFetchingLocation // Flag dari fungsi refreshTargetLocation
+  ) {
+    showPopup("⚠️ Tunggu hingga koordinat target dan GPS siap.", "warning");
+    vibrateAlertShort();
+    return; // Keluar dari fungsi
+  }
+
+  // --- 4. VALIDASI AREA (Khusus Hadir) ---
+  if (status === "Hadir") {
+    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
+    if (!insideArea) {
+      showPopup("❌ Anda di luar area absensi.", "error");
+      vibrateAlertShort();
+      return;
+    }
+  }
+
+  // --- 5. VALIDASI KONDISI FOTO ---
   if (fotoData) {
     showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
     return;
@@ -1294,35 +1324,7 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
-    showPopup("⚠️ GPS belum siap / akurasi rendah.", "warning");
-    return;
-  }
-
-  // Khusus HADIR, cek area sebelum jepret
-  if (status === "Hadir") {
-    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
-    if (!insideArea) {
-      showPopup("❌ Anda di luar area absensi.", "error");
-      return;
-    }
-  }
-
-// VALIDASI GPS & KOORDINAT TARGET
-  if (
-    (gpsData[0] === 0 && gpsData[1] === 0) || 
-    animatingGPS || 
-    improvingAccuracy || 
-    koordinatValue.includes("Sedang mengambil data") || 
-    koordinatValue.includes("Sedang mencari lokasi") ||
-    isFetchingLocation // Menggunakan flag dari fungsi refreshTargetLocation sebelumnya
-  ) {
-    showPopup("⚠️ Tunggu hingga koordinat target dan GPS siap.", "warning");
-    vibrateAlertShort();
-    isSnapping = false;
-    return;
-  }
-  // --- 2. PROSES PENGAMBILAN FOTO ---
+  // JIKA SEMUA LOLOS, BARU MULAI PROSES SNAP
   isSnapping = true;
   showPopup("Mengambil foto...", "loading");
 
