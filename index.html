@@ -1689,6 +1689,24 @@ async function submitAbsensiForm() {
     }
 }
 
+// =========================================================================================================
+// FUNGSI PEMBANTU: FORMAT TANGGAL & WAKTU (INDONESIA)
+// =========================================================================================================
+function formatIndonesia(waktuString) {
+    const d = new Date(waktuString);
+    if (isNaN(d)) return waktuString; // Jika bukan format tanggal, kembalikan teks aslinya
+
+    const tgl = String(d.getDate()).padStart(2, "0");
+    const bln = String(d.getMonth() + 1).padStart(2, "0"); // Bulan dimulai dari 0
+    const thn = d.getFullYear();
+    
+    const jam = String(d.getHours()).padStart(2, "0");
+    const menit = String(d.getMinutes()).padStart(2, "0");
+    const detik = String(d.getSeconds()).padStart(2, "0");
+
+    return `${tgl}-${bln}-${thn} | ${jam}:${menit}:${detik} WITA`;
+}
+     
 /* =========================================================================================================
     BAGIAN KODE NAVIGASI & LAPORAN ABSENSI
     Fungsi: Menangani tampilan halaman laporan absensi, filter data, dan kembali ke halaman absen
