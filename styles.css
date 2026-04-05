@@ -204,7 +204,7 @@ textarea.form-control {
 ============================ */
 #popupNotif {
     position: fixed !important;
-    top: 10px;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%) translateY(-20px); /* aman utk iOS */
     max-width: 350px;
