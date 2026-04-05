@@ -723,10 +723,7 @@ document.getElementById("restartGPS").addEventListener("click", () => {
     btn.disabled = true;
 
     // 2. Bersihkan semua interval dan watcher
-    resetGPSState();
-    // Pastikan animasi lama berhenti
-    stopAccAnim();
-    stopGPSLoading();
+    stopGPSMonitoring();
 
     // 3. Beri jeda sedikit lebih lama (500ms) agar hardware GPS di HP sempat "istirahat"
     setTimeout(() => {
@@ -1018,7 +1015,11 @@ function startGPSMonitoring() {
             navigator.geolocation.clearWatch(gpsWatcherId);
             gpsWatcherId = null;
         }
-
+      
+        // Pastikan animasi lama berhenti
+        stopAccAnim();
+        stopGPSLoading();
+      
         const MAX_ACCURACY = 30;
         const WATCH_OPTIONS = {
             enableHighAccuracy: true,
