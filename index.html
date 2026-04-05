@@ -731,8 +731,6 @@ async function refreshTargetLocation(callback) {
 
   try {
     isFetchingLocation = true; // KUNCI PROSES
-    if (tampil) tampil.value = "⌛ Mencari lokasi..."; // Beri tanda sedang loading
-
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
