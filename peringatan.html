@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <base target="_top">
+    <style>
+      html {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        background-size: cover;
+        height: 100%;
+      }
+      body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 100%;
+          font-family: "Poppins", sans-serif;
+          
+          display: flex;
+          justify-content: center; /* Tetap di tengah secara horizontal (kiri-kanan) */
+          
+          /* UBAH INI: align-items center diganti menjadi flex-start */
+          align-items: flex-start; 
+          
+          /* TAMBAHKAN INI: Jarak 30px dari atas layar */
+          padding-top: 30px; 
+          
+          background: #2acfe8; /* Fallback color */
+          box-sizing: border-box; /* Agar padding tidak merusak ukuran body */
+      }
+      .container {
+        text-align: center;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 40px 30px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 350px;
+      }
+      .title { font-weight: 700; margin-bottom: 8px; font-size: 18px; color: #2c3e50; }
+      .subtitle { font-size: 14px; margin-bottom: 20px; font-weight: 600; color: #1fa2ff; text-transform: uppercase; }
+      
+      .description {
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        color: #555;
+      }
+
+      /* Area pesan khusus (Loading/Error) */
+      #info-status {
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 15px;
+        color: #27ae60;
+      }
+
+      .footer {
+        margin-top: 20px;
+        font-size: 11px;
+        color: #999;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      }
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #2acfe8;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: none; /* Sembunyi dulu, muncul lewat JS */
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px auto;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .error-text { color: #e74c3c; }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="loader" class="spinner"></div>
+      
+      <div class="title">PEMERINTAH DESA GALUNGAN</div>
+      <div class="subtitle">LAYANAN ABSENSI ONLINE</div>
+      
+      <div class="description">
+        Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.
+      </div>
+
+      <div id="info-status"></div>
+
+      <div class="footer">
+        © 2026 Pemerintah Desa Galungan
+      </div>
+    </div>
+
+    <script>
+      function isMobileDevice() {
+        return /Android|iPhone/i.test(navigator.userAgent);
+      }
+
+      window.onload = function() {
+        const infoStatus = document.getElementById('info-status');
+        const loader = document.getElementById('loader');
+
+        if (isMobileDevice()) {
+          // Jika HP: Tampilkan spinner dan pesan pengalihan
+          loader.style.display = "block";
+          
+          const baseUrl = "<?= scriptUrl ?>"; 
+          const urlAbsensi = baseUrl + "?page=absen"; 
+          
+          window.location.replace(urlAbsensi);
+
+        } else {
+          // Jika Desktop: Tampilkan pesan error (Deskripsi tetap ada di atasnya)
+          infoStatus.innerHTML = `
+            <span class="error-text">AKSES DITOLAK!</span><br>
+            Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
+          `;
+        }
+      };
+    </script>
+  </body>
+</html>
