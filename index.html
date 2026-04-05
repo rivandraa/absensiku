@@ -204,7 +204,7 @@
 <!-- JQuery -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxeeLLoLcCb194b3JJuJBX-2detUx02NTRn7s_3_FSKu4v1RyuRVD1dnuEIzcg9RGgB/exec";
+
 /* =========================================================================================================
     BAGIAN KODE TANGGAL
     Fungsi: Menampilkan tanggal dan waktu real-time pada halaman login dan absensi
@@ -409,79 +409,78 @@ async function hashPassword(password) {
     }
 }
 
+// ================================
+// LOGIN
+// ================================
+/**
+ * Proses login user
+ */
 async function loginUser() {
-    hideAlerts();
+    hideAlerts(); // Sembunyikan alert sebelumnya
 
     const username = $('#username').val().trim();
     const password = $('#password').val().trim();
 
-    showPopup("Memproses login...", "loading");
+    showPopup("Memproses login...", "loading"); // Popup loading
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(password); // Hash password sebelum dikirim ke server
 
-    try {
-        const response = await fetch(GAS_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                action: "login",
-                username: username,
-                password: passwordHash
-            })
-        });
+    google.script.run
+        .withSuccessHandler(res => {
+            if (res) {
+                // ✅ Login berhasil
+                userData = res;
 
-        const res = await response.json();
+                // simpan semua data termasuk spreadsheetId & folderId
+                sessionStorage.setItem('userData', JSON.stringify(res));
+                sessionStorage.setItem('page', 'absen');
 
-        if (res) {
-            // ✅ Login berhasil
-            userData = res;
+                $('#LoginPage').hide();
+                $('#AbsensiPage').show();
 
-            sessionStorage.setItem('userData', JSON.stringify(res));
-            sessionStorage.setItem('page', 'absen');
+                // Set informasi perangkat/user
+                $('#perangkatDisplay').val(res.nama + ' | ' + res.jabatan);
+                $('#perangkatData').val(res.nama + '|' + res.jabatan);
 
-            $('#LoginPage').hide();
-            $('#AbsensiPage').show();
+                fotoData = null; // Reset foto
 
-            $('#perangkatDisplay').val(res.nama + ' | ' + res.jabatan);
-            $('#perangkatData').val(res.nama + '|' + res.jabatan);
+                // Parsing koordinat dari Spreadsheet
+                if (res.koordinat) {
+                    const parts = res.koordinat.split(",");
+                    targetLocation = {
+                        lat: parseFloat(parts[0]),
+                        lon: parseFloat(parts[1])
+                    };
+                    lastTargetLocation = targetLocation;
+                } else {
+                    targetLocation = null;
+                    lastTargetLocation = null;
+                }
 
-            fotoData = null;
+                // Debug log ID
+                console.log("Spreadsheet ID:", res.spreadsheetId);
+                console.log("Folder ID:", res.folderId);
+                
+                showPopup("Login berhasil! Selamat datang " + res.nama, "success");
 
-            // Parsing koordinat
-            if (res.koordinat) {
-                const parts = res.koordinat.split(",");
-                targetLocation = {
-                    lat: parseFloat(parts[0]),
-                    lon: parseFloat(parts[1])
-                };
-                lastTargetLocation = targetLocation;
+                startIdleTimer();
+                startGPS();
+                startWebcam();
+                
             } else {
-                targetLocation = null;
-                lastTargetLocation = null;
+                // Username/password salah
+                $('#alertLogin').html("⚠️ Username atau Password salah!").show();
+                showPopup("Username atau password salah!", "error");
             }
-
-            console.log("Spreadsheet ID:", res.spreadsheetId);
-            console.log("Folder ID:", res.folderId);
-
-            showPopup("Login berhasil! Selamat datang " + res.nama, "success");
-
-            startIdleTimer();
-            startGPS();
-            startWebcam();
-
-        } else {
-            $('#alertLogin').html("⚠️ Username atau Password salah!").show();
-            showPopup("Username atau password salah!", "error");
-        }
-
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        const msg = "Gagal koneksi ke server";
-        showPopup("⚠️ " + msg, "error", 5000);
-        $('#alertLogin').html("⚠️ " + msg).show();
-    }
+        })
+        .withFailureHandler(error => {
+            // ✅ Tangkap error dari server (misalnya ID kosong)
+            console.error("Server Error:", error);
+            const msg = error && error.message ? error.message : "Gagal terhubung ke server/Login Gagal. Coba lagi...";
+            showPopup("⚠️ " + msg, "error", 5000);
+            $('#alertLogin').html("⚠️ " + msg).show();
+        })
+        .checkLogin(username, passwordHash); // Panggil Apps Script server untuk validasi login
 }
 
 /* =========================================================================================================
