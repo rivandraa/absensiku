@@ -307,7 +307,7 @@ function showPopup(msg, type = "success", duration = null, callback = null) {
     if (duration === false) return;
 
     // Default duration
-    if (duration === null) duration = 5000;
+    if (duration === null) duration = 3000;
 
     // Auto-close popup
     popup._timeout = setTimeout(() => {
@@ -1317,14 +1317,12 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
 
   // 2. VALIDASI DATA SPREADSHEET (Koordinat Target Absensi)
   // Hanya cek ini jika status bukan Dinas/Izin/Sakit
-  if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+    const tampil = document.getElementById("titikKoordinatTampil");
     const koordinatValue = tampil ? tampil.value : "";
     
-    if (
-      koordinatValue.includes("Sedang mengambil") || 
-      koordinatValue.includes("Mencari lokasi") || 
-      (typeof isFetchingLocation !== 'undefined' && isFetchingLocation)
-    ) {
+    // Jika teks di kotak input masih "Sedang mengambil data...", maka kunci tombol snap
+    if (koordinatValue === "Sedang mengambil data...") {
       showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
       vibrateAlertShort();
       isSnapping = false;
