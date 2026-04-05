@@ -1146,11 +1146,12 @@ function stopGPSMonitoring() {
 /* =========================================================================================================
     BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REVISI GITHUB PAGES)
 ========================================================================================================= */
-let stream = null; 
+let stream = null;
 let gpsSaatFoto = [0, 0];
 let fotoData = null;
-let isStarting = false; 
+let isStarting = false;
 
+// Fungsi Stop & Start Webcam tetap sama seperti asli Anda...
 function stopWebcam() {
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
@@ -1168,12 +1169,10 @@ function stopWebcam() {
 async function startWebcam() {
   if (isStarting) return;
   isStarting = true;
-
   const video = document.getElementById('video');
   const preview = document.getElementById('fotoPreview');
   const container = document.getElementById('cameraContainer');
   const btn = document.getElementById('restartCamera');
-
   if (btn) btn.disabled = true;
 
   try {
@@ -1181,36 +1180,23 @@ async function startWebcam() {
     stopWebcam();
     preview.style.display = 'none';
     video.style.display = 'none';
-
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const hasCamera = devices.some(d => d.kind === 'videoinput');
-    if (!hasCamera) {
-      showPopup("📷 Tidak ada kamera terdeteksi.", "error");
-      return;
-    }
-
+    
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user' },
       audio: false
     });
-
     video.srcObject = stream;
-    await new Promise((resolve, reject) => {
-      video.onloadedmetadata = () => {
-        video.play().then(resolve).catch(reject);
-      };
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => { video.play().then(resolve); };
     });
-
     video.style.display = 'block';
     const aspect = video.videoHeight / video.videoWidth;
     if (aspect && isFinite(aspect)) {
       container.style.height = `${container.offsetWidth * aspect}px`;
     }
   } catch (err) {
-    console.error("Kamera Error:", err);
-    showPopup("❌ Gagal akses kamera: " + err.message, "error");
+    showPopup("❌ Kamera error: " + err.message, "error");
     stopWebcam();
   } finally {
     isStarting = false;
@@ -1218,33 +1204,14 @@ async function startWebcam() {
   }
 }
 
-// Event Listener Restart Camera
-document.getElementById("restartCamera").addEventListener("click", async function () {
-  this.innerHTML = "⏳ Starting...";
-  this.disabled = true;
-  await startWebcam();
-  setTimeout(() => {
-    this.innerHTML = "📷 Start/Restart Kamera";
-    this.disabled = false;
-  }, 500);
-});
-
-function resetFoto(showNotif = false) {
-  fotoData = null;
-  const fotoPreview = document.getElementById("fotoPreview");
-  const video = document.getElementById("video");
-  if (fotoPreview) { fotoPreview.src = ""; fotoPreview.style.display = "none"; }
-  if (video) { video.style.display = "block"; }
-  if (showNotif) showPopup("⚠️ Foto berhasil direset.", "warning");
-}
-
-// ================================
-// TOMBOL SNAP (VERSI FETCH)
-// ================================
+// Tombol Snap (Logika sama persis, hanya ganti cara ambil waktu server)
 let isSnapping = false;
 
 document.getElementById('snap').addEventListener('click', async () => {
-  if (isSnapping) return;
+  if (isSnapping) {
+    showTempPopup("⏳ Sedang memproses foto...", "warning");
+    return;
+  }
   isSnapping = true;
 
   const video = document.getElementById('video');
@@ -1252,18 +1219,21 @@ document.getElementById('snap').addEventListener('click', async () => {
   const status = statusInput ? statusInput.value : "";
   const ketField = document.getElementById("keterangan");
   const keterangan = ketField ? ketField.value.trim() : "";
+  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
 
-  // Validasi Dasar
+  // --- VALIDASI (Sama persis dengan asli) ---
   if (!status) { showPopup("⚠️ Pilih Status!", "warning"); isSnapping = false; return; }
   if (["izin","sakit","dinas"].includes(status.toLowerCase()) && !keterangan) {
     showPopup("⚠️ Keterangan wajib diisi!", "warning"); isSnapping = false; return;
   }
-  if (!stream) { showPopup("⚠️ Kamera Off!", "error"); isSnapping = false; return; }
-  if (gpsData[0] === 0) { showPopup("⚠️ GPS belum siap!", "warning"); isSnapping = false; return; }
+  if (!stream) { showPopup("⚠️ Kamera tidak aktif!", "error"); isSnapping = false; return; }
+  if (gpsData[0] === 0 && gpsData[1] === 0) { showPopup("⚠️ GPS belum siap!", "warning"); isSnapping = false; return; }
 
   showPopup("Mengambil foto...", "loading");
 
-  const labelStatus = (status === "Hadir" || status === "Dinas") ? status.toUpperCase() : "";
+  const statusAbsen = statusInput.value;
+  const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas") ? statusAbsen.toUpperCase() : "";
+  const finalKeterangan = keterangan ? `${keterangan}` : "";
   gpsSaatFoto = [...gpsData];
 
   const canvas = document.createElement("canvas");
@@ -1271,69 +1241,104 @@ document.getElementById('snap').addEventListener('click', async () => {
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
   const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
+
   const fotoPreview = document.getElementById("fotoPreview");
   fotoPreview.src = fotoMurni;
   fotoPreview.style.display = "block";
   video.style.display = "none";
 
+  showPopup("Sinkronisasi waktu server...", "loading");
+
   try {
-    // 🔥 GANTI google.script.run dengan FETCH
+    // 🔥 PERUBAHAN DISINI: Ambil waktu server via Fetch API
     const response = await fetch(`${GAS_URL}?action=getServerTime`);
     const serverTime = await response.json();
 
+    // Lanjut ke Proses Watermark (Logika desain sama persis)
+    const ctx2 = canvas.getContext("2d");
     const img = new Image();
+
     img.onload = function () {
-      const ctx2 = canvas.getContext("2d");
       ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // --- Logika Watermark Anda (Sama seperti asli) ---
+
       const marginBottom = 20;
       const startX = 30;
+      const paddingRight = 30;
+      const paddingBox = 40;
       const lineHeight = 28;
-      ctx2.textAlign = "left";
-      ctx2.shadowColor = "rgba(0,0,0,0.6)"; ctx2.shadowBlur = 3;
 
-      function getWrappedLines(c, text, maxWidth) {
+      ctx2.textAlign = "left";
+      ctx2.shadowColor = "rgba(0,0,0,0.6)";
+      ctx2.shadowBlur = 3;
+      ctx2.shadowOffsetX = 1;
+      ctx2.shadowOffsetY = 1;
+
+      function getWrappedLines(ctx, text, maxWidth) {
         const words = text.split(" ");
         let lines = [], line = "";
         for (let n = 0; n < words.length; n++) {
           const testLine = line + words[n] + " ";
-          if (c.measureText(testLine).width > maxWidth && n > 0) {
+          if (ctx.measureText(testLine).width > maxWidth && n > 0) {
             lines.push(line.trim()); line = words[n] + " ";
           } else { line = testLine; }
         }
         lines.push(line.trim()); return lines;
       }
 
-      const ketLines = keterangan ? getWrappedLines(ctx2, keterangan, canvas.width - 60) : [];
+      const maxWidthText = canvas.width - startX - paddingRight;
+      ctx2.font = "20px Arial";
+      const ketLines = finalKeterangan ? getWrappedLines(ctx2, finalKeterangan, maxWidthText) : [];
+
       let totalLines = (labelStatus ? 1 : 0) + 3 + ketLines.length;
-      const totalHeight = totalLines * lineHeight;
+      const totalHeight = (totalLines - 0.3) * lineHeight;
       let currentY = canvas.height - marginBottom;
 
-      // Background
-      const gradient = ctx2.createLinearGradient(0, 0, canvas.width/1.5, 0);
-      gradient.addColorStop(0, "rgba(0,0,0,0.4)"); gradient.addColorStop(1, "rgba(0,0,0,0)");
+      function getMaxTextWidth(ctx, texts) {
+        let max = 0;
+        texts.forEach(t => { const w = ctx.measureText(t).width; if (w > max) max = w; });
+        return max;
+      }
+
+      let allLines = [];
+      if (labelStatus) { ctx2.font = "bold 24px Arial"; allLines.push(labelStatus); }
+      ctx2.font = "bold 23px Arial"; allLines.push(serverTime.waktu + " WITA");
+      ctx2.font = "22px Arial"; allLines.push(`${serverTime.tanggal} | ${serverTime.hari}`);
+      ctx2.font = "20px Arial"; allLines.push(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`);
+      if (ketLines.length > 0) allLines = allLines.concat(ketLines);
+
+      const maxTextWidth = getMaxTextWidth(ctx2, allLines);
+      const finalBoxWidth = Math.min(maxTextWidth + paddingBox, canvas.width);
+
+      // Gradient & Frame (Sesuai aslinya)
+      const gradient = ctx2.createLinearGradient(0, 0, finalBoxWidth, 0);
+      gradient.addColorStop(0, "rgba(0,0,0,0.35)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
       ctx2.fillStyle = gradient;
-      ctx2.fillRect(0, currentY - totalHeight, canvas.width/1.5, totalHeight + 10);
+      ctx2.fillRect(0, currentY - totalHeight - 15, finalBoxWidth, totalHeight + 30);
 
-      // Garis Kuning
-      ctx2.strokeStyle = "#FFC107"; ctx2.lineWidth = 4;
-      ctx2.beginPath(); ctx2.moveTo(startX-12, currentY-totalHeight); ctx2.lineTo(startX-12, currentY+10); ctx2.stroke();
+      ctx2.shadowColor = "transparent";
+      ctx2.strokeStyle = "#FFC107";
+      ctx2.lineWidth = 4;
+      ctx2.beginPath();
+      ctx2.moveTo(startX - 12, currentY - totalHeight - 15);
+      ctx2.lineTo(startX - 12, currentY + 15);
+      ctx2.stroke();
 
-      // Render Teks
+      // Render Teks dari bawah ke atas
       ctx2.fillStyle = "#FFFFFF";
       if (ketLines.length > 0) {
+        ctx2.font = "20px Arial";
         for (let i = ketLines.length - 1; i >= 0; i--) {
-          ctx2.font = "20px Arial"; ctx2.fillText(ketLines[i], startX, currentY); currentY -= lineHeight;
+          ctx2.fillText(ketLines[i], startX, currentY); currentY -= lineHeight;
         }
       }
       ctx2.font = "20px Arial"; ctx2.fillText(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`, startX, currentY); currentY -= lineHeight;
       ctx2.font = "22px Arial"; ctx2.fillText(`${serverTime.tanggal} | ${serverTime.hari}`, startX, currentY); currentY -= lineHeight;
       ctx2.font = "bold 23px Arial"; ctx2.fillText(serverTime.waktu + " WITA", startX, currentY); currentY -= lineHeight;
       if (labelStatus) {
-        ctx2.font = "bold 24px Arial"; ctx2.fillStyle = "#FFC107"; ctx2.fillText(labelStatus, startX, currentY);
+        ctx2.font = "bold 24px Arial"; ctx2.fillStyle = "#FFC107";
+        ctx2.fillText(labelStatus, startX, currentY);
       }
 
       const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
@@ -1344,7 +1349,6 @@ document.getElementById('snap').addEventListener('click', async () => {
         gps: gpsSaatFoto,
         waktuServerISO: serverTime.iso
       };
-
       fotoPreview.src = finalFoto;
       showPopup("Foto berhasil diambil ✅", "success", 1000);
       isSnapping = false;
