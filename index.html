@@ -1543,116 +1543,88 @@ function startIdleTimer(){ resetIdleTimer(); }
 // ================================
 let isSubmitting = false;
 
-function submitAbsensiForm() {
-    hideAlerts();
+async function submitAbsensiForm() {
+    if (typeof hideAlerts === "function") hideAlerts();
 
     // 🚫 Cegah double submit
     if (isSubmitting) {
-        showTempPopup("⏳ Absensi sedang diproses, harap tunggu...");
-        vibrateAlertShort();  // 🔥 getaran
+        showTempPopup("⏳ Absensi sedang diproses, harap tunggu...", "warning");
+        vibrateAlertShort();
         return;
     }
     isSubmitting = true;
 
-    const perangkatVal = $('#perangkatData').val().trim();
+    const perangkatVal = $('#perangkatData').val() ? $('#perangkatData').val().trim() : "";
     const val = perangkatVal ? perangkatVal.split('|') : [];
 
+    // Validasi Sesi
     if (!userData || val.length < 2 || !val[0] || !val[1]) {
-        popupActive = false; 
         showPopup("Sesi login berakhir. Silakan login ulang.", "error");
         isSubmitting = false;
         return;
     }
 
-    // ======================================
-    // Ambil Data
-    // ======================================
-    const statusRaw = $('#status').val().trim();          // nilai asli, Huruf besar di depan
-    const status = statusRaw.toLowerCase();              // untuk validasi, lowercase
+    const statusRaw = $('#status').val().trim(); 
+    const status = statusRaw.toLowerCase();
     const keterangan = $('#keterangan').val().trim();
 
-    // ======================================
-    // VALIDASI STATUS WAJIB DIPILIH
-    // ======================================
+    // Validasi Status
     if (!statusRaw) {
         showPopup("Silakan pilih status terlebih dahulu!", "warning");
         vibrateAlertShort();
-
-        const statusField = document.getElementById('status');
-        statusField.focus();
-        statusField.scrollIntoView({ behavior: "smooth", block: "center" });
-
+        document.getElementById('status').focus();
         isSubmitting = false;
         return;
     }
 
-    // ======================================
-    // VALIDASI KETERANGAN WAJIB
-    // Berlaku untuk IJIN & DINAS
-    // ======================================
-    // VALIDASI KETERANGAN WAJIB
-    const ketWajib = (status === "izin" || status === "sakit" || status === "dinas");
-
+    // Validasi Keterangan (Izin/Sakit/Dinas)
+    const ketWajib = ["izin", "sakit", "dinas"].includes(status);
     if (ketWajib && !keterangan) {
         showPopup("Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
-        vibrateAlertShort();  // 🔥 getaran
-        // 🔥 Autofokus + Scroll ke field keterangan
+        vibrateAlertShort();
         const ketField = document.getElementById('keterangan');
         ketField.focus();
-        ketField.scrollIntoView({ behavior: "smooth", block: "center" });
-
         isSubmitting = false;
         return;
     }
 
-    // ======================================
-    // VALIDASI FOTO WAJIB
-    // Kecuali: IJIN & SAKIT
-    // ======================================
-    // Ambil foto
-    const wajibFoto = (status === "hadir" || status === "dinas");
-
+    // Validasi Foto (Hadir/Dinas)
+    const wajibFoto = ["hadir", "dinas"].includes(status);
     if (wajibFoto && !fotoData) {
         showPopup("Foto Kehadiran wajib untuk status " + statusRaw + "!", "warning");
-        vibrateAlertShort();  // 🔥 getaran
+        vibrateAlertShort();
         isSubmitting = false;
         return;
     }
 
-    // ======================================
-    // VALIDASI GPS
-    // Kecuali: IJIN & SAKIT
-    // ======================================
-    const gpsWajib = !(status === "izin" || status === "sakit");
-
+    // Validasi GPS (Kecuali Izin/Sakit)
+    const gpsWajib = !["izin", "sakit"].includes(status);
     if (gpsWajib) {
-        if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
-            showPopup("GPS belum aktif. Izinkan akses lokasi.", "error");
-            vibrateAlertShort();  // 🔥 getaran
+        if ((gpsData[0] === 0 && gpsData[1] === 0) || (typeof animatingGPS !== 'undefined' && animatingGPS)) {
+            showPopup("GPS belum aktif atau sedang akurasi. Izinkan akses lokasi.", "error");
+            vibrateAlertShort();
             isSubmitting = false;
             return;
         }
     }
 
-    // ======================================
-    // VALIDASI RADIUS KHUSUS HADIR
-    // ======================================
+    // Validasi Radius (Khusus Hadir)
     if (status === "hadir") {
         const [lat, lon] = gpsData;
-        const insideArea = checkUserLocation(lat, lon, status);
+        const insideArea = checkUserLocation(lat, lon, statusRaw);
         if (!insideArea) {
-            showPopup("⚠️ Anda berada di luar area, silakan pindah ke area yang ditentukan!", "error", false);
-            vibrateAlertShort();  // 🔥 getaran
+            showPopup("⚠️ Anda berada di luar area absensi!", "error");
+            vibrateAlertShort();
             isSubmitting = false;
             return;
         }
     }
 
     // ======================================
-    // DATA DIKIRIM KE APPS SCRIPT
+    // PERSIAPAN DATA UNTUK DIKIRIM
     // ======================================
-    // Default data
-    const data = {
+    const payload = {
+        action: "submitAbsensi", // Memberitahu GAS action apa yang dijalankan
         nama: val[0],
         jabatan: val[1],
         status: statusRaw,
@@ -1662,62 +1634,59 @@ function submitAbsensiForm() {
         folderId: userData.folderId
     };
 
-    // Tambahkan foto & GPS hanya jika bukan Izin/Sakit
-    if (!(status === "izin" || status === "sakit")) {
-        data.foto = fotoData;
-        data.gps = gpsSaatFoto;
+    if (!["izin", "sakit"].includes(status)) {
+        payload.foto = fotoData; // Ini berisi {base64, name, type, dll}
+        payload.gps = gpsSaatFoto;
     }
 
-    // Kunci tombol Snap & Reset
+    // Kunci UI
     document.getElementById('snap').disabled = true;
     document.getElementById('reset').disabled = true;
-    
     showPopup("Memproses absensi...", "loading");
 
-    google.script.run
-        .withSuccessHandler(res => {
-            // 🔓 Buka kembali tombol setelah submit selesai
-            document.getElementById('snap').disabled = false;
-            document.getElementById('reset').disabled = false;
-            isSubmitting = false;
+    try {
+        // 🔥 KIRIM DATA KE GAS MENGGUNAKAN FETCH (POST)
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
 
-            if (res) {
-                if (res.status === "berhasil") {
-                    const waktuID = formatIndonesia(res.waktu);
-                    showPopup(
-                        `✅ Absensi berhasil!<br>Nama: <b>${res.nama}</b><br>Waktu Absen: <b>${waktuID}</b>`,
-                        "success", 6000);
-                    vibrateAlertLong();  // 🔥 getaran
-                    $('#status').val('');
-                    $('#keterangan').val('');
-                    fotoData = null;
-                    $('#perangkatDisplay').val(userData.nama + ' | ' + userData.jabatan);
-                    resetFoto();
+        const res = await response.json();
 
-                } else if (res.status === "sudah_absen") {
-                    const waktuID = formatIndonesia(res.waktu);
-                    showPopup(
-                        `⚠️ Anda sudah absen hari ini!<br>Waktu Absen: <b>${waktuID}</b>`,
-                        "warning", 6000);
-                    vibrateAlertLong();  // 🔥 getaran
-                } else {
-                    showPopup("⚠️ Terjadi kesalahan saat menyimpan absensi.", "error");
-                    vibrateAlertShort();  // 🔥 getaran
-                }
-            } else {
-                showPopup("⚠️ Terjadi kesalahan tak terduga.", "error");
-                vibrateAlertShort();  // 🔥 getaran
-            }
-        })
-        .withFailureHandler(err => {
-            // 🔓 Buka kembali tombol setelah submit selesai
-            document.getElementById('snap').disabled = false;
-            document.getElementById('reset').disabled = false;
-            isSubmitting = false;
-            showPopup("⚠️ Gagal mengirim absensi: " + err.message, "error");
-            vibrateAlertLong();  // 🔥 getaran
-        })
-        .submitAbsensi(data);
+        // Buka Kunci UI
+        document.getElementById('snap').disabled = false;
+        document.getElementById('reset').disabled = false;
+        isSubmitting = false;
+
+        if (res.status === "berhasil") {
+            const waktuID = formatIndonesia(res.waktu);
+            showPopup(
+                `✅ Absensi berhasil!<br>Nama: <b>${res.nama}</b><br>Waktu: <b>${waktuID}</b>`,
+                "success", 6000
+            );
+            vibrateAlertLong();
+            
+            // Reset Form
+            $('#status').val('');
+            $('#keterangan').val('');
+            fotoData = null;
+            resetFoto();
+
+        } else if (res.status === "sudah_absen") {
+            const waktuID = formatIndonesia(res.waktu);
+            showPopup(`⚠️ Anda sudah absen hari ini!<br>Waktu: <b>${waktuID}</b>`, "warning", 6000);
+            vibrateAlertLong();
+        } else {
+            throw new Error(res.message || "Gagal menyimpan");
+        }
+
+    } catch (err) {
+        document.getElementById('snap').disabled = false;
+        document.getElementById('reset').disabled = false;
+        isSubmitting = false;
+        showPopup("⚠️ Gagal mengirim: " + err.message, "error");
+        vibrateAlertLong();
+    }
 }
 
 /* =========================================================================================================
