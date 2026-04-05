@@ -1247,10 +1247,18 @@ function resetFoto(showNotif = false) {
 // ================================
 // TOMBOL SNAP (VERSI FETCH)
 // ================================
+// ================================
+// Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
+// ================================
+let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => {
-  if (isSnapping) return;
+document.getElementById('snap').addEventListener('click', () => {
+  if (isSnapping) {
+    showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
+    vibrateAlertShort();
+    return;
+  }
   isSnapping = true;
 
   const video = document.getElementById('video');
@@ -1258,31 +1266,105 @@ document.getElementById('snap').addEventListener('click', async () => {
   const status = statusInput ? statusInput.value : "";
   const ketField = document.getElementById("keterangan");
   const keterangan = ketField ? ketField.value.trim() : "";
+  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
 
-  // Validasi Dasar
-  if (!status) { showPopup("⚠️ Pilih Status!", "warning"); isSnapping = false; return; }
-  if (["izin","sakit","dinas"].includes(status.toLowerCase()) && !keterangan) {
-    showPopup("⚠️ Keterangan wajib diisi!", "warning"); isSnapping = false; return;
+  // VALIDASI STATUS KOSONG
+  if (!status) {
+    showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    statusInput.focus();
+    return;
   }
-  if (!stream) { showPopup("⚠️ Kamera Off!", "error"); isSnapping = false; return; }
-  if (gpsData[0] === 0) { showPopup("⚠️ GPS belum siap!", "warning"); isSnapping = false; return; }
+
+  // VALIDASI KETERANGAN WAJIB (izin/sakit/dinas)
+  const ketWajib = ["izin","sakit","dinas"].includes(status.toLowerCase());
+  if (ketWajib && !keterangan) {
+    showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
+    vibrateAlertShort();
+    ketField.focus();
+    ketField.scrollIntoView({ behavior: "smooth", block: "center" });
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI FOTO
+  if (fotoData) {
+    showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI KAMERA
+  if (!stream) {
+    showPopup("⚠️ Kamera tidak tersedia / tidak diizinkan!", "error");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI GPS
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI AREA ABSEN
+  if (status === "Hadir") {
+    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
+    if (!insideArea) {
+      showPopup("❌ Anda di luar area absensi.", "error");
+      vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
 
   showPopup("Mengambil foto...", "loading");
 
-  const labelStatus = (status === "Hadir" || status === "Dinas") ? status.toUpperCase() : "";
-  gpsSaatFoto = [...gpsData];
+// ==========================================
+// 1) AMBIL DATA STATUS & FOTO AWAL
+// ==========================================
+const statusElement = document.getElementById("status");
+const statusAbsen = statusElement.value; // Mengambil nilai (Hadir/Izin/Dinas, dll)
 
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+// Validasi: Pastikan status sudah dipilih sebelum ambil foto
+if (!statusAbsen) {
+    showPopup("Silakan pilih status absen dulu!", "error");
+    return;
+}
 
-  const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-  const fotoPreview = document.getElementById("fotoPreview");
-  fotoPreview.src = fotoMurni;
-  fotoPreview.style.display = "block";
-  video.style.display = "none";
+// Ambil teks label (HADIR atau DINAS)
+const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas") ? statusAbsen.toUpperCase() : "";
+
+// Ambil keterangan dari input (pastikan ada input dengan id="keterangan")
+const ketElement = document.getElementById("keterangan");
+const keteranganUser = ketElement ? ketElement.value.trim() : "";
+const finalKeterangan = keteranganUser ? `${keteranganUser}` : "";
+
+gpsSaatFoto = [...gpsData];
+
+const canvas = document.createElement("canvas");
+canvas.width = video.videoWidth;
+canvas.height = video.videoHeight;
+
+const ctx = canvas.getContext("2d");
+ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+// Simpan foto MURNI untuk preview awal
+const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
+
+// Freeze tampilan kamera
+const fotoPreview = document.getElementById("fotoPreview");
+fotoPreview.src = fotoMurni;
+fotoPreview.style.display = "block";
+video.style.display = "none";
+//stopWebcam();
+
+showPopup("Sinkronisasi waktu server...", "loading");
 
   try {
     // 🔥 GANTI google.script.run dengan FETCH
