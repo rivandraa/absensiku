@@ -706,7 +706,6 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-// Tambahkan variabel pengunci di luar fungsi (global)
 let lastRequestId = 0; 
 
 async function refreshTargetLocation(callback) {
@@ -718,72 +717,69 @@ async function refreshTargetLocation(callback) {
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // BUAT ID UNIK untuk setiap permintaan agar tidak bentrok
+  // ID Unik untuk mencegah data balapan (Anti-Kedip)
   const currentRequestId = ++lastRequestId;
 
-  // --- LANGKAH PENTING: RESET TAMPILAN & VARIABEL SEBELUM FETCH ---
-  // Ini mencegah lokasi lama (Kantor) tampil saat sedang loading WFH
-  targetLocation = null; 
+  // 1. Reset variabel internal agar tidak menggunakan lokasi lama saat proses fetch
+  targetLocation = null;
   lastTargetLocation = null;
-  
-  if (hidden) hidden.value = "";
-  // ---------------------------------------------------------------
 
-  // 1. CEK STATUS KOSONG
+  // 2. Validasi Status Kosong
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
+    if (hidden) hidden.value = "";
     if (typeof callback === "function") callback();
     return;
   }
 
-  // 2. CEK STATUS DINAS/IZIN/SAKIT
-  if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+  // 3. Bypass Status Non-Radius (Dinas/Izin/Sakit)
+  const statusTanpaRadius = ["Dinas", "Izin", "Sakit"];
+  if (statusTanpaRadius.includes(currentStatus)) {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
     if (typeof callback === "function") callback();
-    return; 
+    return;
   }
 
-  // 3. PROSES AMBIL DATA (HADIR/WFH)
+  // 4. Proses Ambil Data dari Google Apps Script
   try {
-    // Tampilkan status loading agar user tahu proses sedang berjalan
-    if (tampil) tampil.value = "⌛ Sinkronisasi lokasi...";
+    // (Baris "⌛ Sinkronisasi lokasi..." sudah dihapus sesuai permintaan)
 
-    const statusKirim = encodeURIComponent(currentStatus);
-    const userKirim = encodeURIComponent(userRequesting);
-    const url = `${GAS_URL}?action=getTargetLocation&username=${userKirim}&status=${statusKirim}`;
+    const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
     const loc = await response.json();
 
-    // VALIDASI: Jika user sudah klik tombol lain sebelum data ini sampai, ABRESIKAN.
+    // Proteksi Anti-Kedip: Jika user sudah ganti status lagi, abaikan hasil fetch ini
     if (currentRequestId !== lastRequestId) return;
     if (!userData || userData.username !== userRequesting) return;
 
     if (loc && loc.lat && loc.lon) {
-      const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+      const latVal = parseFloat(loc.lat);
+      const lonVal = parseFloat(loc.lon);
       
-      // Update variabel global dengan data BARU
-      targetLocation = newLocation;
-      lastTargetLocation = newLocation;
+      targetLocation = { lat: latVal, lon: lonVal };
+      lastTargetLocation = targetLocation;
 
-      const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
+      const koordinatMurni = `${latVal.toFixed(6)}, ${lonVal.toFixed(6)}`;
       
+      // Update tampilan dengan Nama Lokasi (Kantor/Rumah) dari Database
       if (tampil) {
         tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
       }
       if (hidden) hidden.value = koordinatMurni;
 
-      // Langsung hitung jarak jika GPS user sudah aktif
+      // Segera hitung jarak jika GPS user sudah aktif
       if (typeof gpsData !== 'undefined' && gpsData[0] !== 0) {
         checkUserLocation(gpsData[0], gpsData[1], currentStatus);
       }
 
     } else {
       if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
+      if (hidden) hidden.value = "";
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Fetch Error:", error);
     if (currentRequestId === lastRequestId && tampil) {
       tampil.value = "Gagal memuat koordinat";
     }
