@@ -718,61 +718,66 @@ async function refreshTargetLocation(callback) {
   // =============================================================
   // 1. CEK JIKA STATUS BELUM DIPILIH (KOSONG)
   // =============================================================
+let isFetchingLocation = false; // Penanda agar tidak bentrok
+
+async function refreshTargetLocation(callback) {
+  const userRequesting = (userData && userData.username) ? userData.username : null;
+  if (!userRequesting || isFetchingLocation) return; // Jika sedang loading, abaikan klik baru
+
+  const statusInput = document.getElementById("status");
+  const currentStatus = statusInput ? statusInput.value : "";
+  const tampil = document.getElementById("titikKoordinatTampil");
+  const hidden = document.getElementById("titikKoordinat");
+
+  // Peringatan jika status kosong
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
-    if (hidden) hidden.value = "";
     targetLocation = null;
-    lastTargetLocation = null;
-    
     if (typeof callback === "function") callback();
-    return; // Berhenti di sini, jangan fetch ke server
+    return;
   }
 
-  // ✅ CEK STATUS DINAS/IZIN/SAKIT (Tetap seperti sebelumnya)
-  if (currentStatus === "Dinas" || currentStatus === "Izin" || currentStatus === "Sakit") {
+  // Bypass untuk Dinas/Izin/Sakit
+  if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
     if (tampil) tampil.value = "-";
-    if (hidden) hidden.value = "-";
     targetLocation = null;
-    lastTargetLocation = null;
     if (typeof callback === "function") callback();
-    return; 
+    return;
   }
 
-  // 2. JIKA STATUS SUDAH DIPILIH (HADIR/WFH), Ambil data dari server
   try {
-    const statusKirim = encodeURIComponent(currentStatus);
-    const userKirim = encodeURIComponent(userRequesting);
-    
-    // Pastikan menyertakan &status agar server tahu harus ambil kolom yang mana
-    const url = `${GAS_URL}?action=getTargetLocation&username=${userKirim}&status=${statusKirim}`;
+    isFetchingLocation = true; // KUNCI PROSES
+    if (tampil) tampil.value = "⌛ Mencari lokasi..."; // Beri tanda sedang loading
+
+    const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
     const loc = await response.json();
 
-    if (!userData || userData.username !== userRequesting) return;
+    // Validasi apakah user masih di status yang sama saat data datang
+    const statusSaatIni = document.getElementById("status").value;
+    if (statusSaatIni !== currentStatus) {
+       isFetchingLocation = false;
+       return; // Batalkan jika user sudah ganti status lagi
+    }
 
     if (loc && loc.lat && loc.lon) {
-      const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-      targetLocation = newLocation;
-      lastTargetLocation = newLocation;
-
-      const koordinatMurni = `${Number(newLocation.lat).toFixed(6)}, ${Number(newLocation.lon).toFixed(6)}`;
-      if (tampil) {
-        tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
-      }
+      targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+      const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
+      
+      if (tampil) tampil.value = loc.nama || koordinatMurni;
       if (hidden) hidden.value = koordinatMurni;
-
     } else {
-      targetLocation = null;
       if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
-      if (hidden) hidden.value = "";
     }
-  } catch (error) {
-    console.error("Error:", error);
-    if (tampil) tampil.value = "Gagal memuat koordinat";
-  }
 
-  if (typeof callback === "function") callback();
+  } catch (error) {
+    console.error("Gagal:", error);
+    if (tampil) tampil.value = "Gagal memuat koordinat";
+  } finally {
+    isFetchingLocation = false; // BUKA KUNCI
+    if (typeof callback === "function") callback();
+  }
 }
 
 // =====================================================
