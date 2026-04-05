@@ -11,26 +11,37 @@
 
     window.onload = function() {
         const gate = document.getElementById('gatekeeper-page');
-        const login = document.getElementById('login-page');
+        const login = document.getElementById('LoginPage'); // Pastikan ID sesuai (L besar)
         const loader = document.getElementById('loader');
         const msg = document.getElementById('status-msg');
 
         if (isMobile()) {
-            // 1. Tampilkan Spinner di Gerbang
+            // 1. Tampilkan Spinner
             loader.style.display = "block";
-            msg.innerHTML = "Perangkat Terverifikasi.<br>Membuka Layanan...";
+            msg.innerHTML = "<b>Akses Disetujui.</b><br>Menghubungkan ke Server...";
 
-            // 2. Jeda 2 detik, lalu TUKAR posisi
+            // 2. Jeda 2.5 detik untuk verifikasi visual
             setTimeout(function() {
-                gate.style.setProperty("display", "none", "important"); // Sembunyikan Gerbang
-                login.style.setProperty("display", "block", "important"); // Munculkan Login
+                // Sembunyikan Gerbang secara permanen
+                gate.style.setProperty("display", "none", "important");
+                
+                // Tampilkan Login Page dengan paksa
+                login.style.setProperty("display", "block", "important");
+                
+                // Opsional: Jalankan fungsi update waktu jika ada
+                if (typeof updateWaktu === "function") updateWaktu(); 
             }, 2500);
 
         } else {
-            // JIKA LAPTOP: Gerbang tetap ada, Login tetap sembunyi
+            // JIKA LAPTOP: Tampilkan pesan error permanen
             loader.style.display = "none";
-            msg.innerHTML = `<b style="color:red">AKSES DITOLAK!</b><br>Gunakan Smartphone.`;
-            login.style.display = "none"; // Pastikan login tidak ikut muncul
+            msg.innerHTML = `
+                <div class="alert alert-danger">
+                    <h4 class="alert-heading">AKSES DITOLAK!</h4>
+                    <p>Demi keamanan, aplikasi Absensi Pemdes Galungan hanya dapat diakses melalui <b>Smartphone (Android/iOS)</b>.</p>
+                </div>`;
+            // Pastikan login tetap tersembunyi
+            login.style.setProperty("display", "none", "important");
         }
     };
 </script>
