@@ -697,8 +697,17 @@ function resetGPSState() {
     targetLocation = null;
     lastTargetLocation = null;
 
-    //reset tampilan
-    //updateGPSDisplay("Silakan tunggu...");
+    if (gpsWatcherId !== null) {
+        navigator.geolocation.clearWatch(gpsWatcherId);
+        gpsWatcherId = null;
+    }
+
+    // TAMBAHKAN INI: Pastikan flag fetch di-reset
+    isFetchingLocation = false; 
+    
+    // Pastikan UI kembali ke awal
+    const gpsDiv = document.getElementById("gps");
+    if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
 }
 
 // =====================================================
@@ -1007,6 +1016,10 @@ function startGPSMonitoring() {
             gpsWatcherId = null;
         }
 
+      // Pastikan animasi lama berhenti
+        stopAccAnim();
+        stopGPSLoading();
+      
         const MAX_ACCURACY = 30;
         const WATCH_OPTIONS = {
             enableHighAccuracy: true,
@@ -1166,7 +1179,7 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
             if (!gpsSystemActive) return; // cek setiap 3 detik
             handleGPS();
             refreshTargetLocation();
-        }, 3000);
+        }, 5000);
     }
 
     if (navigator.permissions) {
