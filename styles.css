@@ -1,4 +1,61 @@
 <style>
+//Bagian Peringatan
+/* --- KODE WAJIB AGAR GERBANG MENUTUPI LAYAR --- */
+#gatekeeper-overlay {
+  position: fixed;      /* Mengunci posisi agar tetap di layar meski di-scroll */
+  top: 0;
+  left: 0;
+  width: 100vw;         /* Lebar penuh layar */
+  height: 100vh;        /* Tinggi penuh layar */
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  z-index: 99999;       /* Angka tertinggi agar berada di depan Login Page */
+  display: flex;        /* Untuk meratakan konten ke tengah */
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 50px;
+  box-sizing: border-box;
+}
+
+/* Memastikan Login Page dan Absensi Page sembunyi di awal jika bukan HP */
+.container {
+  display: none; 
+}
+
+/* Styling Kontainer Gerbang */
+.gate-container {
+  text-align: center;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px 30px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  width: 90%;
+  max-width: 380px;
+  z-index: 100000;
+}
+
+/* Spinner Loading */
+.gate-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #2acfe8;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: gate-spin 1s linear infinite;
+  margin: 0 auto 20px auto;
+}
+
+@keyframes gate-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.gate-title { font-weight: 800; font-size: 18px; color: #2c3e50; margin-bottom: 5px; }
+.gate-subtitle { font-size: 13px; font-weight: 700; color: #1fa2ff; margin-bottom: 20px; }
+.gate-error { color: #e74c3c; font-weight: bold; font-size: 16px; }
+
 /* =========================================================================================================
     CSS UTAMA APLIKASI ABSENSI
     Fungsinya:
