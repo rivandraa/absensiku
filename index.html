@@ -1,40 +1,50 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<script>
-  function isMobileDevice() {
-    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  }
+    <div class="container">
+      <div id="loader" class="spinner"></div>
+      
+      <div class="title">PEMERINTAH DESA GALUNGAN</div>
+      <div class="subtitle">LAYANAN ABSENSI ONLINE</div>
+      
+      <div class="description">
+        Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.
+      </div>
 
-  window.onload = function() {
-    const infoStatus = document.getElementById('info-status');
-    const loader = document.getElementById('loader');
+      <div id="info-status"></div>
 
-    if (isMobileDevice()) {
-      // 1. Tampilkan spinner agar terlihat sedang memproses
-      loader.style.display = "block";
-      infoStatus.innerHTML = "Memverifikasi Perangkat...";
+      <div class="footer">
+        © 2026 Pemerintah Desa Galungan
+      </div>
+    </div>
 
-      // 2. Arahkan ke file index.html yang ada di GitHub Pages Anda
-      // Karena file ini (peringatan/main) dan index.html biasanya satu folder,
-      // cukup tuliskan nama filenya saja.
-      const urlLogin = "index.html"; 
+    <script>
+      function isMobileDevice() {
+        return /Android|iPhone/i.test(navigator.userAgent);
+      }
 
-      // 3. Beri jeda 2 detik agar pesan "Pemerintah Desa Galungan" terbaca
-      setTimeout(function() {
-        window.location.replace(urlLogin);
-      }, 2000); 
+      window.onload = function() {
+        const infoStatus = document.getElementById('info-status');
+        const loader = document.getElementById('loader');
 
-    } else {
-      // Jika Laptop/Desktop: Tampilkan pesan blokir
-      loader.style.display = "none";
-      infoStatus.innerHTML = `
-        <span class="error-text" style="color: #e74c3c;">AKSES DITOLAK!</span><br>
-        Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
-      `;
-    }
-  };
-</script>
+        if (isMobileDevice()) {
+          // Jika HP: Tampilkan spinner dan pesan pengalihan
+          loader.style.display = "block";
+          
+          const baseUrl = "<?= scriptUrl ?>"; 
+          const urlAbsensi = baseUrl + "?page=absen"; 
+          
+          window.location.replace(urlAbsensi);
+
+        } else {
+          // Jika Desktop: Tampilkan pesan error (Deskripsi tetap ada di atasnya)
+          infoStatus.innerHTML = `
+            <span class="error-text">AKSES DITOLAK!</span><br>
+            Aplikasi ini hanya dapat dibuka melalui <b>Smartphone (Android/iOS)</b>.
+          `;
+        }
+      };
+    </script>
 <meta charset="UTF-8">
 <base target="_top"> 
 <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
