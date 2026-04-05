@@ -565,7 +565,7 @@ let lastInsideArea = null;
 // koordinat target user (diisi saat login dari Code.gs)
 let targetLocation = null;
 let gpsSystemActive = false;
-
+const namaLokasi = getNamaLokasi();
 // =====================================================
 // START GPS
 // =====================================================
@@ -992,11 +992,18 @@ function startGPSMonitoring() {
 let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n" +
                   "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > " + MAX_ACCURACY + " Meter\n" +
                   "Sedang meningkatkan akurasi" + ".".repeat(accDots);
-            if ((status === "Hadir" || status === "WFH") && targetLocation) {
-                displayText += insideArea
-                    ? `\n✅ Berada dalam area/radius ${namaLokasi}`
-                    : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
-            }
+                    if ((status === "Hadir" || status === "WFH") && targetLocation) {
+                        // 2. CEK APAKAH NAMA LOKASI SUDAH SIAP
+                        // Jika masih "Sedang mengambil data...", tampilkan pesan yang lebih masuk akal
+                        if (namaLokasi === "Sedang mengambil data...") {
+                            displayText += `-`;
+                        } else {
+                            // 3. JIKA SUDAH SIAP, BARU TAMPILKAN RADIUS
+                            displayText += insideArea
+                                ? `\n✅ Berada dalam area/radius ${namaLokasi}`
+                                : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
+                        }
+                    }
 
                 updateGPSDisplay(displayText);
             }, 500);
@@ -1046,11 +1053,18 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
 
 let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n" +
                   "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > " + MAX_ACCURACY + " Meter";
-            if ((status === "Hadir" || status === "WFH") && targetLocation) {
-                displayText += insideArea
-                    ? `\n✅ Berada dalam area/radius ${namaLokasi}`
-                    : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
-            }
+                    if ((status === "Hadir" || status === "WFH") && targetLocation) {
+                        // 2. CEK APAKAH NAMA LOKASI SUDAH SIAP
+                        // Jika masih "Sedang mengambil data...", tampilkan pesan yang lebih masuk akal
+                        if (namaLokasi === "Sedang mengambil data...") {
+                            displayText += `-`;
+                        } else {
+                            // 3. JIKA SUDAH SIAP, BARU TAMPILKAN RADIUS
+                            displayText += insideArea
+                                ? `\n✅ Berada dalam area/radius ${namaLokasi}`
+                                : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
+                        }
+                    }
 
                     updateGPSDisplay(displayText);
                 }
