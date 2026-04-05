@@ -3,45 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
-    <title>Pemerintah Desa Galungan - Absensi</title>
+    <title>Pemdes Galungan - Absensi</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100vh;
+            margin: 0; padding: 0; height: 100vh;
             font-family: "Poppins", sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            display: flex; justify-content: center; align-items: flex-start;
             padding-top: 50px;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             box-sizing: border-box;
         }
         .container {
-            text-align: center;
-            backdrop-filter: blur(18px);
+            text-align: center; backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 350px;
+            border-radius: 20px; background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            width: 90%; max-width: 350px;
         }
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #2acfe8;
             border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            display: none; /* Muncul lewat JS */
+            width: 35px; height: 35px;
+            display: none; /* Muncul via JS */
             animation: spin 1s linear infinite;
             margin: 0 auto 20px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .title { font-weight: 700; font-size: 18px; color: #2c3e50; margin-bottom: 5px; }
         .subtitle { font-size: 13px; font-weight: 700; color: #1fa2ff; text-transform: uppercase; margin-bottom: 20px; }
         .description { font-size: 13px; line-height: 1.6; color: #555; margin-bottom: 20px; }
@@ -50,27 +39,19 @@
     </style>
 </head>
 <body>
-
     <div class="container">
         <div id="loader" class="spinner"></div>
-
         <div class="title">PEMERINTAH DESA GALUNGAN</div>
         <div class="subtitle">LAYANAN ABSENSI ONLINE</div>
-        
         <div class="description">
             Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.
         </div>
-
         <div id="status-msg">Memeriksa Perangkat...</div>
-
-        <div class="footer">
-            © 2026 Pemerintah Desa Galungan
-        </div>
+        <div class="footer">© 2026 Pemerintah Desa Galungan</div>
     </div>
 
     <script>
-        // Fungsi deteksi HP
-        function checkDevice() {
+        function isMobile() {
             return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         }
 
@@ -78,19 +59,16 @@
             const loader = document.getElementById('loader');
             const msg = document.getElementById('status-msg');
 
-            if (checkDevice()) {
-                // JIKA HP: Munculkan spinner dan arahkan ke index.html
+            if (isMobile()) {
                 loader.style.display = "block";
                 msg.style.color = "#27ae60";
-                msg.innerHTML = "Perangkat Terverifikasi.<br>Menghubungkan ke Server...";
+                msg.innerHTML = "Akses Disetujui.<br>Menghubungkan ke Server...";
 
                 setTimeout(function() {
-                    // Pindah ke file index.html di GitHub Anda
-                    window.location.replace("index.html");
-                }, 2000); // Jeda 2 detik agar spinner terlihat
-
+                    // GANTI 'login.html' dengan nama file halaman login Anda yang baru
+                    window.location.replace("login.html");
+                }, 2000);
             } else {
-                // JIKA LAPTOP: Sembunyikan spinner, kasih peringatan merah
                 loader.style.display = "none";
                 msg.style.color = "#e74c3c";
                 msg.innerHTML = "<b>AKSES DITOLAK!</b><br>Gunakan Smartphone untuk absen.";
