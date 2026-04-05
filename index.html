@@ -1253,14 +1253,14 @@ function resetFoto(showNotif = false) {
 let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => {
+document.getElementById('snap').addEventListener('click', () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
     return;
   }
+  isSnapping = true;
 
-  // --- 1. AMBIL ELEMEN DOM ---
   const video = document.getElementById('video');
   const statusInput = document.getElementById("status");
   const status = statusInput ? statusInput.value : "";
@@ -1268,64 +1268,75 @@ document.getElementById('snap').addEventListener('click', async () => {
   const keterangan = ketField ? ketField.value.trim() : "";
   const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
   
-  // Ambil elemen tampil di sini agar tidak error
+  // Pastikan variabel tampil didefinisikan untuk mengambil value koordinat target
   const tampil = document.getElementById("titikKoordinatTampil");
-  const koordinatValue = tampil ? tampil.value : "";
 
-  // --- 2. VALIDASI DASAR (Status & Keterangan) ---
+  // VALIDASI STATUS KOSONG
   if (!status) {
     showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
     vibrateAlertShort();
+    isSnapping = false;
     statusInput.focus();
     return;
   }
 
-  const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
+  // VALIDASI KETERANGAN WAJIB (izin/sakit/dinas)
+  const ketWajib = ["izin","sakit","dinas"].includes(status.toLowerCase());
   if (ketWajib && !keterangan) {
     showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
     vibrateAlertShort();
     ketField.focus();
+    ketField.scrollIntoView({ behavior: "smooth", block: "center" });
+    isSnapping = false;
     return;
   }
 
-  // --- 3. VALIDASI KESIAPAN SISTEM (GPS & KOORDINAT) ---
-  // Kita gabungkan semua pengecekan "Kesiapan" di sini
+  // VALIDASI FOTO
+  if (fotoData) {
+    showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI KAMERA
+  if (!stream) {
+    showPopup("⚠️ Kamera tidak tersedia / tidak diizinkan!", "error");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // =============================================================
+  // VALIDASI GPS & KOORDINAT TARGET (Tambahan Baru)
+  // =============================================================
+  const koordinatValue = tampil ? tampil.value : "";
+
   if (
     (gpsData[0] === 0 && gpsData[1] === 0) || 
     animatingGPS || 
     improvingAccuracy || 
     koordinatValue.includes("Sedang mengambil") || 
     koordinatValue.includes("Mencari lokasi") ||
-    isFetchingLocation // Flag dari fungsi refreshTargetLocation
+    (typeof isFetchingLocation !== 'undefined' && isFetchingLocation) 
   ) {
     showPopup("⚠️ Tunggu hingga koordinat target dan GPS siap.", "warning");
     vibrateAlertShort();
-    return; // Keluar dari fungsi
+    isSnapping = false;
+    return;
   }
 
-  // --- 4. VALIDASI AREA (Khusus Hadir) ---
+  // VALIDASI AREA ABSEN
   if (status === "Hadir") {
     const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
     if (!insideArea) {
       showPopup("❌ Anda di luar area absensi.", "error");
       vibrateAlertShort();
+      isSnapping = false;
       return;
     }
   }
 
-  // --- 5. VALIDASI KONDISI FOTO ---
-  if (fotoData) {
-    showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
-    return;
-  }
-
-  if (!stream) {
-    showPopup("⚠️ Kamera tidak tersedia!", "error");
-    return;
-  }
-
-  // JIKA SEMUA LOLOS, BARU MULAI PROSES SNAP
-  isSnapping = true;
   showPopup("Mengambil foto...", "loading");
 
   try {
