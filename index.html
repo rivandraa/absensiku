@@ -416,7 +416,7 @@ async function hashPassword(password) {
  * Proses login user
  */
 // Deklarasikan URL Web App GAS Anda di bagian paling atas skrip
-const GAS_URL = "https://script.google.com/macros/s/ID_DEPLOYMENT_ANDA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxeeLLoLcCb194b3JJuJBX-2detUx02NTRn7s_3_FSKu4v1RyuRVD1dnuEIzcg9RGgB/exec";
 
 async function loginUser() {
     hideAlerts(); 
@@ -705,33 +705,35 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-function refreshTargetLocation(callback) {
+async function refreshTargetLocation(callback) {
   // Simpan siapa yang sedang login SAAT INI
   const userRequesting = (userData && userData.username) ? userData.username : null;
   
   if (!userRequesting) return;
 
-  // Ambil status saat ini dari dropdown
+  // Ambil elemen DOM
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
   // ✅ CEK STATUS DINAS (Tanpa menunggu server)
-  // Jika status dinas, kita langsung ubah tampilannya di sini
   if (currentStatus === "Dinas") {
     if (tampil) tampil.value = "-";
     if (hidden) hidden.value = "-";
     targetLocation = null;
     lastTargetLocation = null;
     
-    // Jika ada callback (misal dari pemberitahuan sistem), jalankan
     if (typeof callback === "function") callback();
-    return; // Stop di sini, tidak perlu tanya server lagi
+    return; 
   }
 
-  // JIKA BUKAN DINAS, barulah kita ambil data dari Google Apps Script
-  google.script.run.withSuccessHandler(loc => {
+  // JIKA BUKAN DINAS, ambil data dari Google Apps Script menggunakan fetch
+  try {
+    // Mengirim username sebagai parameter query
+    const response = await fetch(`${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}`);
+    const loc = await response.json();
+
     // PROTEKSI: Jika user sudah logout/ganti akun sebelum data sampai
     if (!userData || userData.username !== userRequesting) return;
 
@@ -740,8 +742,9 @@ function refreshTargetLocation(callback) {
     if (statusTerbaru === "Dinas") return; 
 
     if (loc && loc.lat && loc.lon) {
-      const newLocation = { lat: loc.lat, lon: loc.lon };
+      const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
 
+      // Logika update targetLocation
       if (!lastTargetLocation || lastTargetLocation.lat !== newLocation.lat || lastTargetLocation.lon !== newLocation.lon) {
         targetLocation = newLocation;
         lastTargetLocation = newLocation;
@@ -765,8 +768,13 @@ function refreshTargetLocation(callback) {
       if (hidden) hidden.value = "";
     }
 
-    if (typeof callback === "function") callback();
-  }).getTargetLocation(userRequesting);
+  } catch (error) {
+    console.error("Gagal mengambil lokasi target:", error);
+    if (tampil) tampil.value = "Gagal memuat koordinat";
+  }
+
+  // Jalankan callback di akhir proses (baik sukses maupun error)
+  if (typeof callback === "function") callback();
 }
 
 // =====================================================
