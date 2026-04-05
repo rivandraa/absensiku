@@ -1267,6 +1267,7 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
   const ketField = document.getElementById("keterangan");
   const keterangan = ketField ? ketField.value.trim() : "";
   const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+  const koordinatValue = tampil ? tampil.value : "";
 
   if (!status) {
     showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
@@ -1307,6 +1308,20 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     }
   }
 
+// VALIDASI GPS & KOORDINAT TARGET
+  if (
+    (gpsData[0] === 0 && gpsData[1] === 0) || 
+    animatingGPS || 
+    improvingAccuracy || 
+    koordinatValue.includes("Sedang mengambil data") || 
+    koordinatValue.includes("Sedang mencari lokasi") ||
+    isFetchingLocation // Menggunakan flag dari fungsi refreshTargetLocation sebelumnya
+  ) {
+    showPopup("⚠️ Tunggu hingga koordinat target dan GPS siap.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
   // --- 2. PROSES PENGAMBILAN FOTO ---
   isSnapping = true;
   showPopup("Mengambil foto...", "loading");
