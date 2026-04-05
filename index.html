@@ -4,59 +4,48 @@
 <meta charset="UTF-8">
 <base target="_top"> 
 <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no">
+<div id="gatekeeper-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#2acfe8; z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;">
+  <div style="text-align:center; background:white; padding:30px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:360px; width:100%;">
+    <b style="font-size:18px; display:block; margin-bottom:5px;">PEMERINTAH DESA GALUNGAN</b>
+    <span style="font-size:13px; color:#1fa2ff; font-weight:bold; display:block; margin-bottom:20px;">LAYANAN ABSENSI ONLINE</span>
+    <p style="font-size:13px; color:#555; line-height:1.5;">Sistem absensi digital untuk meningkatkan disiplin, transparansi dan efisiensi Aparatur Pemerintah Desa.</p>
+    <div id="gate-message" style="font-weight:bold; margin-top:15px; color:#e74c3c;"></div>
+    <div style="margin-top:20px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:15px;">© 2026 Pemerintah Desa Galungan</div>
+  </div>
+</div>
+
 <script>
-    function isMobile() {
-        return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    }
+(function() {
+  // 2. LOGIKA DETEKSI INSTAN
+  const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+  const overlay = document.getElementById('gatekeeper-overlay');
+  const gateMessage = document.getElementById('gate-message');
 
-    window.onload = function() {
-        const gate = document.getElementById('gatekeeper-page');
-        const login = document.getElementById('LoginPage'); // Pastikan ID sesuai (L besar)
-        const loader = document.getElementById('loader');
-        const msg = document.getElementById('status-msg');
-
-        if (isMobile()) {
-            // 1. Tampilkan Spinner
-            loader.style.display = "block";
-            msg.innerHTML = "<b>Akses Disetujui.</b><br>Menghubungkan ke Server...";
-
-            // 2. Jeda 2.5 detik untuk verifikasi visual
-            setTimeout(function() {
-                // Sembunyikan Gerbang secara permanen
-                gate.style.setProperty("display", "none", "important");
-                
-                // Tampilkan Login Page dengan paksa
-                login.style.setProperty("display", "block", "important");
-                
-                // Opsional: Jalankan fungsi update waktu jika ada
-                if (typeof updateWaktu === "function") updateWaktu(); 
-            }, 2500);
-
-        } else {
-            // JIKA LAPTOP: Tampilkan pesan error permanen
-            loader.style.display = "none";
-            msg.innerHTML = `
-                <div class="alert alert-danger">
-                    <h4 class="alert-heading">AKSES DITOLAK!</h4>
-                    <p>Demi keamanan, aplikasi Absensi Pemdes Galungan hanya dapat diakses melalui <b>Smartphone (Android/iOS)</b>.</p>
-                </div>`;
-            // Pastikan login tetap tersembunyi
-            login.style.setProperty("display", "none", "important");
-        }
-    };
+  if (!isMobile) {
+    // JIKA BUKAN HP: Tampilkan overlay dan SEMBUNYIKAN semua container lain
+    overlay.style.display = 'flex';
+    gateMessage.innerHTML = "AKSES DITOLAK!<br>Aplikasi ini hanya dapat dibuka melalui Smartphone (Android/iOS).";
+    
+    // Cari semua div container (Login & Absen) lalu sembunyikan paksa
+    const containers = document.querySelectorAll('.container');
+    containers.forEach(c => c.setAttribute('style', 'display:none !important'));
+    
+    // Kunci body agar tidak bisa discroll
+    document.body.style.overflow = 'hidden';
+  } else {
+    // JIKA HP: Pastikan overlay sembunyi
+    overlay.style.display = 'none';
+  }
+})();
 </script>
+
 <!-- Bootstrap CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="gatekeeper-page" class="container">
-        <div id="loader" class="spinner"></div>
-        <div class="title">PEMERINTAH DESA GALUNGAN</div>
-        <div class="subtitle">LAYANAN ABSENSI ONLINE</div>
-        <div id="status-msg">Memeriksa Perangkat...</div>
-    </div>
+
 <!-- Popup Notifikasi -->
 <div id="popupNotif"></div>
 
