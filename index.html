@@ -790,7 +790,7 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    if ([currentStatus === "Dinas") {
+    if (currentStatus === "Dinas") {
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
         targetLocation = null;
