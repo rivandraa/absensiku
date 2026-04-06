@@ -625,6 +625,7 @@ let lastGPSEnabled = null; // simpan status terakhir
 let lastTargetLocation = null;
 let areaErrorActive = false;
 let lastInsideArea = null;
+let locationCache = {};
 
 // koordinat target user (diisi saat login dari Code.gs)
 let targetLocation = null;
@@ -646,53 +647,31 @@ function startGPS() {
 // RESET GPS STATE TOTAL
 // =====================================================
 function resetGPSState() {
-    // hentikan interval monitoring
-    if (gpsMonitorInterval !== null) {
-        clearInterval(gpsMonitorInterval);
-        gpsMonitorInterval = null;
-    }
+    // 1. HENTIKAN SEMUA INTERVAL & TIMEOUT
+    [gpsMonitorInterval, gpsLoadingInterval, gpsImproveInterval, accAnim].forEach(int => {
+        if (int !== null) clearInterval(int);
+    });
+    gpsMonitorInterval = gpsLoadingInterval = gpsImproveInterval = accAnim = null;
 
-    // hentikan watchPosition
-    if (gpsWatcherId !== null) {
-        navigator.geolocation.clearWatch(gpsWatcherId);
-        gpsWatcherId = null;
-    }
-
-    // hentikan animasi loading GPS
-    if (gpsLoadingInterval !== null) {
-        clearInterval(gpsLoadingInterval);
-        gpsLoadingInterval = null;
-    }
-
-    // hentikan interval improve accuracy
-    if (gpsImproveInterval !== null) {
-        clearInterval(gpsImproveInterval);
-        gpsImproveInterval = null;
-    }
-
-    // hentikan timeout accuracy cycle
     if (accuracyCycleTimer !== null) {
         clearTimeout(accuracyCycleTimer);
         accuracyCycleTimer = null;
     }
 
-    // hentikan animasi titik
-    if (accAnim !== null) {
-        clearInterval(accAnim);
-        accAnim = null;
-    }
-    accDots = 0;
-
+    // 2. HENTIKAN WATCH POSITION (Cukup panggil sekali)
     if (gpsWatcherId !== null) {
         navigator.geolocation.clearWatch(gpsWatcherId);
         gpsWatcherId = null;
     }
 
-    // reset area status
+    // 3. BERSIHKAN CACHE & FLAG FETCH (Agar data selalu fresh)
+    locationCache = {}; // Cara paling cepat membersihkan object cache
+    isFetchingLocation = false; 
+
+    // 4. RESET STATE VARIABLE
+    accDots = 0;
     areaErrorActive = false;
     lastInsideArea = null;
-
-    // reset state GPS
     gpsData = [0, 0];
     gpsErrorActive = false;
     animatingGPS = false;
@@ -702,14 +681,14 @@ function resetGPSState() {
     targetLocation = null;
     lastTargetLocation = null;
 
-    // TAMBAHKAN INI: Pastikan flag fetch di-reset
-    isFetchingLocation = false; 
-
-      // reset tampilan
+    // 5. RESET TAMPILAN UI
     ["titikKoordinatTampil", "titikKoordinat"].forEach(id => {
         const el = document.getElementById(id);
+        // Jika status absensi sedang kosong, lebih baik jangan tulis "Sedang mengambil..."
+        // Tapi jika ini dipanggil saat Restart, maka pesan ini sudah benar.
         if (el) el.value = "Sedang mengambil data...";
     });
+    
     updateGPSDisplay("Silakan tunggu...");
   
     // Pastikan UI kembali ke awal
@@ -787,17 +766,20 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-let isFetchingLocation = false; // Penanda agar tidak bentrok
+let isFetchingLocation = false;
+// Tambahkan cache untuk menyimpan koordinat yang sudah pernah diambil
+const locationCache = {}; 
 
 async function refreshTargetLocation(callback) {
   const userRequesting = (userData && userData.username) ? userData.username : null;
-  if (!userRequesting || isFetchingLocation) return; 
+  if (!userRequesting || isFetchingLocation) return;
 
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
+  // 1. Validasi awal (Sama seperti sebelumnya)
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
     targetLocation = null;
@@ -813,28 +795,46 @@ async function refreshTargetLocation(callback) {
     return;
   }
 
+  // 2. CEK CACHE: Jika data sudah pernah diambil, gunakan langsung (Sangat Cepat!)
+  const cacheKey = `${userRequesting}_${currentStatus}`;
+  if (locationCache[cacheKey]) {
+    const loc = locationCache[cacheKey];
+    targetLocation = loc.coords;
+    if (tampil) tampil.value = loc.nama;
+    if (hidden) hidden.value = loc.raw;
+    if (typeof callback === "function") callback();
+    return; // Keluar, tidak perlu fetch ke server
+  }
+
   try {
-    isFetchingLocation = true; 
+    isFetchingLocation = true;
+    // Set status loading di UI agar user tahu proses sedang berjalan
+    if (tampil) tampil.value = "Sedang mengambil data...";
+
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
     const loc = await response.json();
 
+    // Proteksi jika user sudah ganti status sebelum fetch selesai
     const statusSaatIni = document.getElementById("status").value;
-    if (statusSaatIni !== currentStatus) {
-       isFetchingLocation = false;
-       return; 
-    }
+    if (statusSaatIni !== currentStatus) return;
 
     if (loc && loc.lat && loc.lon) {
-      targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-      const koordinatMurni = `${targetLocation.lat.toFixed(6)}, ${targetLocation.lon.toFixed(6)}`;
-      
-      if (tampil) tampil.value = loc.nama || koordinatMurni;
-      if (hidden) hidden.value = koordinatMurni;
-      
-      // BAGIAN PEMICU HITUNG JARAK OTOMATIS TELAH DIHAPUS SESUAI PERMINTAAN
-      
+      const coords = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+      const raw = `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
+      const namaDisplay = loc.nama || raw;
+
+      // SIMPAN KE CACHE: Agar klik selanjutnya instan
+      locationCache[cacheKey] = {
+        coords: coords,
+        nama: namaDisplay,
+        raw: raw
+      };
+
+      targetLocation = coords;
+      if (tampil) tampil.value = namaDisplay;
+      if (hidden) hidden.value = raw;
     } else {
       if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
       targetLocation = null;
@@ -844,7 +844,7 @@ async function refreshTargetLocation(callback) {
     console.error("Gagal mengambil lokasi:", error);
     if (tampil) tampil.value = "Gagal memuat koordinat";
   } finally {
-    isFetchingLocation = false; 
+    isFetchingLocation = false;
     if (typeof callback === "function") callback();
   }
 }
@@ -895,43 +895,46 @@ function checkUserLocation(lat, lon, status) {
     return insideArea;
 }
 
-// ====== LISTENER STATUS ======
+// ====== LISTENER STATUS (OPTIMAL) ======
 document.addEventListener("DOMContentLoaded", () => {
   const statusEl = document.getElementById("status");
   if (!statusEl) return;
 
-  statusEl.addEventListener("change", e => {
+  statusEl.addEventListener("change", async e => {
     const newStatus = e.target.value;
     const gpsDiv = document.getElementById("gps");
     const gpsHidden = document.getElementById("gpsHidden");
     if (!gpsDiv) return;
 
-    let lines = gpsDiv.innerText.split("\n");
-
-    // Bersihkan baris lama (Status, ✅/❌, ℹ️, 📏)
-    lines = lines.filter(line =>
-      !/^Status:/.test(line) &&
-      !/^✅/.test(line) &&
-      !/^❌/.test(line) &&
-      !/^ℹ️/.test(line) &&
-      !/^📏/.test(line)
+    // 1. Bersihkan semua indikator lama secara instan
+    let lines = gpsDiv.innerText.split("\n").filter(line => 
+      !/^✅|^❌|^ℹ️|^📏|^Status:/.test(line)
     );
 
+    // 2. Berikan respon visual instan jika pilih Hadir/WFH
     if (newStatus === "Hadir" || newStatus === "WFH") {
-      // TAMBAHKAN PESAN TUNGGU (Tanpa Timeout di sini)
       lines.push("ℹ️ Silakan tunggu, sedang menghitung jarak Anda.");
+      
+      // Update UI secepat mungkin
+      const loadingText = lines.join("\n");
+      gpsDiv.innerText = loadingText;
+      if (gpsHidden) gpsHidden.value = loadingText;
+
+      // 3. Picu pengambilan koordinat target (async) tanpa menunggu
+      refreshTargetLocation(); 
     } else {
+      // Jika status lain, bersihkan popup dan reset state
       forceClosePopup();
       areaErrorActive = false;
       lastInsideArea = null;
+      
+      const cleanText = lines.join("\n");
+      gpsDiv.innerText = cleanText;
+      if (gpsHidden) gpsHidden.value = cleanText;
     }
-
-    const newText = lines.join("\n");
-    gpsDiv.innerText = newText;
-    if (gpsHidden) gpsHidden.value = newText;
   });
 });
-  
+
 // =====================================================
 // START GPS MONITORING
 // =====================================================
@@ -1005,7 +1008,7 @@ function startGPSMonitoring() {
 
             setTimeout(() => {
                 startWatch();
-            }, 1500);
+            }, 1000);
         }
 
         if (gpsErrorActive) {
