@@ -727,20 +727,21 @@ document.getElementById("restartGPS").addEventListener("click", () => {
 
     // 3. Beri jeda sedikit lebih lama (500ms) agar hardware GPS di HP sempat "istirahat"
     setTimeout(() => {
-        gpsSystemActive = true;
+        //gpsSystemActive = true;
         
         // Reset tombol kembali ke normal
         btn.innerHTML = "🔄 Restart GPS";
         btn.disabled = false;
         
         // Jalankan kembali
-        startGPS();
+        //startGPS();
+        startGPSMonitoring();
         
         // Tampilkan notifikasi kecil jika ada fungsi showPopup
         if (typeof showPopup === "function") {
             showPopup("GPS Berhasil Direstart", "success", 2000);
         }
-    }, 100); 
+    }, 500); 
 });
 
 // =====================================================
