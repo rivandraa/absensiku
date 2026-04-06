@@ -681,8 +681,8 @@ function resetGPSState() {
     lastTargetLocation = null;
 
       // Pastikan UI kembali ke awal
-    //const gpsDiv = document.getElementById("gps");
-    //if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
+    const gpsDiv = document.getElementById("gps");
+    if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
   
     updateGPSDisplay("Silakan tunggu...");
 }
@@ -773,6 +773,14 @@ async function refreshTargetLocation(callback) {
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
+  // Jika status kosong atau tidak relevan, langsung berhenti tanpa ke server
+  if (!currentStatus || currentStatus === "Pilih Status...") {
+    if (tampil) tampil.value = "⚠️ Pilih Status";
+    targetLocation = null;
+    if (typeof callback === "function") callback();
+    return;
+  }
+  
   // ✅ CEK STATUS DINAS/IZIN/SAKIT (Tanpa menunggu server)
   if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
     if (tampil) tampil.value = "-";
