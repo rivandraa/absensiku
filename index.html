@@ -1171,29 +1171,29 @@ document.getElementById('snap').addEventListener('click', async () => {
   // ============================================================
   // 3. VALIDASI AREA ABSEN (GANTI BAGIAN INI DENGAN KODE SAYA)
   // ============================================================
-//  if (status === "Hadir" || status === "WFH") {
+  if (status === "Hadir" || status === "WFH") {
     // Ambil koordinat GPS paling baru detik ini juga
-//    const latSekarang = gpsData[0];
-//    const lonSekarang = gpsData[1];
+    const latSekarang = gpsData[0];
+    const lonSekarang = gpsData[1];
     
-//    if (latSekarang === 0 || !targetLocation) {
-//        showPopup("⚠️ Koordinat belum siap, mohon tunggu.", "warning");
-//        vibrateAlertShort();
-//        isSnapping = false;
-//        return;
-//    }
+    if (latSekarang === 0 || !targetLocation) {
+        showPopup("⚠️ Koordinat belum siap, mohon tunggu.", "warning");
+        vibrateAlertShort();
+        isSnapping = false;
+        return;
+    }
 
     // Hitung jarak secara instan (Bukan dari teks layar, tapi dari angka GPS asli)
-//    const distSekarang = getDistanceFromLatLonInMeters(latSekarang, lonSekarang, targetLocation.lat, targetLocation.lon);
-//    const isInside = distSekarang <= RADIUS_LIMIT;
+    const distSekarang = getDistanceFromLatLonInMeters(latSekarang, lonSekarang, targetLocation.lat, targetLocation.lon);
+    const isInside = distSekarang <= RADIUS_LIMIT;
 
-//    if (!isInside) {
-//        showPopup(`❌ Di luar area! Jarak Anda: ${distSekarang.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`, "error");
-//        vibrateAlertShort();
-//        isSnapping = false;
-//        return;
-//    }
-//  }
+    if (!isInside) {
+        showPopup(`❌ Di luar area! Jarak Anda: ${distSekarang.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`, "error");
+        vibrateAlertShort();
+        isSnapping = false;
+        return;
+    }
+  }
   // ============================================================
   // AKHIR DARI PERUBAHAN
   // ============================================================
