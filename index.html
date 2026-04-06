@@ -735,12 +735,11 @@ document.getElementById("restartGPS").addEventListener("click", () => {
         
         // Jalankan kembali
         //startGPS();
-        refreshTargetLocation();
         startGPSMonitoring();
         
         // Tampilkan notifikasi kecil jika ada fungsi showPopup
         if (typeof showPopup === "function") {
-            showPopup("GPS Berhasil Direstart", "success", 2000);
+            showPopup("GPS Sedang direstart, silakan tunggu...", "success", 5000);
         }
     }, 500); 
 });
@@ -1181,7 +1180,7 @@ let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n
             if (!gpsSystemActive) return; // cek setiap 3 detik
             handleGPS();
             refreshTargetLocation();
-        }, 5000);
+        }, 3000);
     }
 
     if (navigator.permissions) {
