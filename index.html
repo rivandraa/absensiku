@@ -1087,12 +1087,13 @@ function resetFoto(showNotif = false) {
 // ================================
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => {
+document.getElementById('snap').addEventListener('click', async () => { // Tambahkan async untuk mendukung fetch waktu
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
     return;
   }
+  isSnapping = true;
 
   const video = document.getElementById('video');
   const statusInput = document.getElementById("status");
@@ -1100,6 +1101,9 @@ document.getElementById('snap').addEventListener('click', async () => {
   const ketField = document.getElementById("keterangan");
   const keterangan = ketField ? ketField.value.trim() : "";
   const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+
+  // Mendefinisikan variabel tampil agar bisa dibaca valuenya
+  const tampil = document.getElementById("titikKoordinatTampil");
 
   // VALIDASI STATUS KOSONG
   if (!status) {
@@ -1111,7 +1115,7 @@ document.getElementById('snap').addEventListener('click', async () => {
   }
 
   // VALIDASI KETERANGAN WAJIB (izin/sakit/dinas)
-  const ketWajib = ["izin","sakit","dinas"].includes(status.toLowerCase());
+  const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
   if (ketWajib && !keterangan) {
     showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
     vibrateAlertShort();
@@ -1137,25 +1141,41 @@ document.getElementById('snap').addEventListener('click', async () => {
     return;
   }
 
-  // VALIDASI GPS
+// 1. VALIDASI GPS HP (Sinyal/Akurasi Perangkat)
   if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
-    showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
+    showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
     vibrateAlertShort();
     isSnapping = false;
     return;
   }
 
-  // VALIDASI AREA ABSEN
-  if (status === "Hadir") {
-    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
-    if (!insideArea) {
-      showPopup("❌ Anda di luar area absensi.", "error");
+  // 2. VALIDASI DATA SPREADSHEET (Koordinat Target Absensi)
+  // Hanya cek ini jika status bukan Dinas/Izin/Sakit
+if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const koordinatValue = tampil ? tampil.value : "";
+    
+    // Jika teks di kotak input masih "Sedang mengambil data...", maka kunci tombol snap
+    if (koordinatValue === "Sedang mengambil data...") {
+      showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
       vibrateAlertShort();
       isSnapping = false;
       return;
     }
   }
-  isSnapping = true;
+
+  // 3. VALIDASI AREA ABSEN (Jarak)
+  // Validasi ini sekarang berlaku untuk status HADIR maupun WFH
+  if (status === "Hadir" || status === "WFH") {
+    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
+    if (!insideArea) {
+      showPopup("❌ Anda di luar area absensi (" + status + ").", "error");
+      vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+  
   showPopup("Mengambil foto...", "loading");
 
   // ==========================================
