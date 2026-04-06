@@ -758,95 +758,93 @@ function stopGPSLoading() {
 // =====================================================
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
-let isFetchingLocation = false; 
+let isFetchingLocation = false; // Flag agar tidak terjadi request bertumpuk
 
 async function refreshTargetLocation(callback) {
-  // 1. CEK IDENTITAS (Safety Check)
-  const userRequesting = (userData?.username) || null;
+  // 1. CEK IDENTITAS
+  const userRequesting = (userData && userData.username) ? userData.username : null;
   if (!userRequesting || isFetchingLocation) {
     if (typeof callback === "function") callback();
     return;
   }
 
-  // 2. CEK ELEMEN UI & STATUS
-  const statusEl = document.getElementById("status");
-  const currentStatus = statusEl ? statusEl.value : "";
+  // 2. AMBIL ELEMEN UI
+  const statusInput = document.getElementById("status");
+  const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // Validasi awal status
-  if (!currentStatus || currentStatus === "Pilih Status...") {
-    if (tampil) tampil.value = "⚠️ Pilih Status";
-    targetLocation = null;
-    if (typeof callback === "function") callback();
-    return;
-  }
-
-  // Reset tampilan jika status adalah luar kantor (Dinas/Izin/Sakit)
+  // ✅ CEK STATUS DINAS/IZIN/SAKIT (Tanpa menunggu server)
   if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-    if (tampil && tampil.value !== "-") tampil.value = "-";
-    if (hidden && hidden.value !== "-") hidden.value = "-";
+    if (tampil) tampil.value = "-";
+    if (hidden) hidden.value = "-";
     targetLocation = null;
+    lastTargetLocation = null;
+    
     if (typeof callback === "function") callback();
-    return;
+    return; 
   }
 
   try {
     isFetchingLocation = true;
-    
-    // Timeout 8 detik agar tidak "hanging" jika sinyal desa lemah
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    if (tampil) tampil.value = "Sedang mengambil data...";
 
+    // 3. AMBIL DATA DARI SERVER (Ganti google.script.run dengan fetch)
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
+    const response = await fetch(url);
     const loc = await response.json();
 
-    // VALIDASI: Pastikan status belum berubah saat fetch selesai
-    if (statusEl.value !== currentStatus) return;
+    // PROTEKSI: Cek apakah user masih login dan status belum berubah saat data sampai
+    if (!userData || userData.username !== userRequesting) return;
+    const statusTerbaru = document.getElementById("status") ? document.getElementById("status").value : "";
+    if (statusTerbaru !== currentStatus) return; 
 
     if (loc && loc.lat && loc.lon) {
-      const newLat = parseFloat(loc.lat);
-      const newLon = parseFloat(loc.lon);
-      
-      // LOGIKA REVISI: Cek apakah koordinat target berubah dari yang lama
-      const isChanged = !targetLocation || 
-                        targetLocation.lat !== newLat || 
-                        targetLocation.lon !== newLon;
+      const newLocation = { 
+        lat: parseFloat(loc.lat), 
+        lon: parseFloat(loc.lon) 
+      };
+
+      // Cek apakah koordinat target benar-benar berubah
+      const isChanged = !lastTargetLocation || 
+                        lastTargetLocation.lat !== newLocation.lat || 
+                        lastTargetLocation.lon !== newLocation.lon;
 
       if (isChanged) {
-        // Update memori global
-        targetLocation = { lat: newLat, lon: newLon };
-        
-        const koordinatMurni = `${newLat.toFixed(6)}, ${newLon.toFixed(6)}`;
-        const namaBaru = loc.nama || koordinatMurni;
-
-        // Update UI hanya jika teks berbeda
-        if (tampil && tampil.value !== namaBaru) tampil.value = namaBaru;
-        if (hidden && hidden.value !== koordinatMurni) hidden.value = koordinatMurni;
+        targetLocation = newLocation;
+        lastTargetLocation = newLocation;
 
         // --- PEMICU HITUNG JARAK OTOMATIS ---
-        // Segera hitung jarak begitu koordinat target baru didapat
-        if (typeof handleGPS === "function") {
-            console.log("Koordinat target diperbarui, memicu hitung ulang jarak...");
-            handleGPS(); 
+        // Jika GPS sudah aktif (gpsData ada), langsung hitung ulang
+        if (gpsData && gpsData[0] !== 0 && gpsData[1] !== 0) {
+          console.log("Koordinat diperbarui, menghitung jarak...");
+          // Gunakan handleGPS atau checkUserLocation sesuai nama fungsi Anda
+          if (typeof handleGPS === "function") {
+            handleGPS();
+          } else if (typeof checkUserLocation === "function") {
+            checkUserLocation(gpsData[0], gpsData[1], statusTerbaru);
+          }
         }
       }
+
+      const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
+
+      if (tampil) {
+        tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
+      }
+      if (hidden) hidden.value = koordinatMurni;
+
     } else {
-      if (tampil) tampil.value = "Titik tidak ditemukan";
       targetLocation = null;
+      lastTargetLocation = null;
+      if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
+      if (hidden) hidden.value = "";
     }
 
   } catch (error) {
-    console.error("Fetch error:", error);
-    if (error.name === 'AbortError') {
-      if (tampil) tampil.value = "⚠️ Koneksi Lambat";
-    } else {
-      if (tampil) tampil.value = "⚠️ Gagal memuat";
-    }
+    console.error("Gagal mengambil lokasi:", error);
+    if (tampil) tampil.value = "Gagal memuat koordinat";
   } finally {
     isFetchingLocation = false;
     if (typeof callback === "function") callback();
