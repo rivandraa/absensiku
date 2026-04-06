@@ -625,7 +625,6 @@ let lastGPSEnabled = null; // simpan status terakhir
 let lastTargetLocation = null;
 let areaErrorActive = false;
 let lastInsideArea = null;
-let locationCache = {};
 
 // koordinat target user (diisi saat login dari Code.gs)
 let targetLocation = null;
@@ -787,7 +786,7 @@ async function refreshTargetLocation(callback) {
 
   try {
     isFetchingLocation = true;
-    if (tampil) tampil.value = "Sedang mengambil data...";
+    //if (tampil) tampil.value = "Sedang mengambil data...";
 
     // 3. AMBIL DATA DARI SERVER (Ganti google.script.run dengan fetch)
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
@@ -928,7 +927,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lines.push(`${icon} Jarak: ${dist.toFixed(0)}m`);
       } else {
         // Jika data belum ada, baru tampilkan loading
-        lines.push("ℹ️ Menghubungkan satelit...");
+        //lines.push("ℹ️ Menghubungkan satelit...");
       }
 
       // Jalankan refresh target di latar belakang (agar koordinat desa terbaru diambil)
