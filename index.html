@@ -609,9 +609,6 @@ async function isGPSEnabledUniversal() {
 // =====================================================
 // KONFIGURASI & STATE GLOBAL
 // =====================================================
-// =====================================================
-// GPS STATE
-// =====================================================
 let gpsWatcherId = null;
 let gpsMonitorInterval = null;
 let gpsLoadingInterval = null;
@@ -632,7 +629,7 @@ let lastInsideArea = null;
 let targetLocation = null;
 let gpsSystemActive = false;
 const RADIUS_LIMIT = 30; // meter
-const MAX_ACCURACY = 300;  // meter
+const MAX_ACCURACY = 300; // meter
 
 // =====================================================
 // START & STOP GPS
@@ -667,7 +664,7 @@ function resetGPSState() {
         gpsWatcherId = null;
     }
 
-    isFetchingLocation = false; 
+    isFetchingLocation = false;
     accDots = 0;
     areaErrorActive = false;
     lastInsideArea = null;
@@ -780,7 +777,8 @@ async function refreshTargetLocation(callback) {
 
     try {
         isFetchingLocation = true;
-        const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(currentUserName)}&status=${encodeURIComponent(currentStatus)}`;
+        // Perbaikan: Menggunakan userRequesting agar sinkron dengan baris 112
+        const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
 
@@ -822,7 +820,6 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// FUNGSI BARU: Untuk validasi saat Snap
 function checkUserLocation(lat, lon, status) {
     if (!targetLocation) return false;
     const dist = getDistanceFromLatLonInMeters(lat, lon, targetLocation.lat, targetLocation.lon);
@@ -963,15 +960,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-/* =========================================================================================================
-    BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REDESAIN + ERROR MAPPING)
-    - Live view: mirror (selfie) di video saja
-    - Snap: foto normal (tidak mirror) + watermark normal
-    - Preview: sama dengan foto yang dikirim (tidak mirror)
-========================================================================================================= */
-/* =========================================================================================================
-    BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REVISI GITHUB PAGES)
-========================================================================================================= */
+// =====================================================
+// KODE KAMERA & FOTO
+// =====================================================
 let stream = null; 
 let gpsSaatFoto = [0, 0];
 let fotoData = null;
@@ -1044,7 +1035,6 @@ async function startWebcam() {
   }
 }
 
-// Event Listener Restart Camera
 document.getElementById("restartCamera").addEventListener("click", async function () {
   this.innerHTML = "⏳ Starting...";
   this.disabled = true;
@@ -1065,15 +1055,11 @@ function resetFoto(showNotif = false) {
 }
 
 // ================================
-// TOMBOL SNAP (VERSI FETCH)
+// TOMBOL SNAP
 // ================================
-// ================================
-// Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
-// ================================
-let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => { // Tambahkan async untuk mendukung fetch waktu
+document.getElementById('snap').addEventListener('click', async () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
@@ -1088,10 +1074,6 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
   const keterangan = ketField ? ketField.value.trim() : "";
   const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
 
-  // Mendefinisikan variabel tampil agar bisa dibaca valuenya
-  const tampil = document.getElementById("titikKoordinatTampil");
-
-  // VALIDASI STATUS KOSONG
   if (!status) {
     showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
     vibrateAlertShort();
@@ -1100,7 +1082,6 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  // VALIDASI KETERANGAN WAJIB (izin/sakit/dinas)
   const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
   if (ketWajib && !keterangan) {
     showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
@@ -1111,7 +1092,6 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  // VALIDASI FOTO
   if (fotoData) {
     showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
     vibrateAlertShort();
@@ -1119,7 +1099,6 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  // VALIDASI KAMERA
   if (!stream) {
     showPopup("⚠️ Kamera tidak tersedia / tidak diizinkan!", "error");
     vibrateAlertShort();
@@ -1127,7 +1106,6 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-// 1. VALIDASI GPS HP (Sinyal/Akurasi Perangkat)
   if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
     showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
     vibrateAlertShort();
@@ -1135,13 +1113,9 @@ document.getElementById('snap').addEventListener('click', async () => { // Tamba
     return;
   }
 
-  // 2. VALIDASI DATA SPREADSHEET (Koordinat Target Absensi)
-  // Hanya cek ini jika status bukan Dinas/Izin/Sakit
-if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+  if (!["Dinas", "Izin", "Sakit"].includes(status)) {
     const tampil = document.getElementById("titikKoordinatTampil");
     const koordinatValue = tampil ? tampil.value : "";
-    
-    // Jika teks di kotak input masih "Sedang mengambil data...", maka kunci tombol snap
     if (koordinatValue === "Sedang mengambil data...") {
       showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
       vibrateAlertShort();
@@ -1150,8 +1124,6 @@ if (!["Dinas", "Izin", "Sakit"].includes(status)) {
     }
   }
 
-  // 3. VALIDASI AREA ABSEN (Jarak)
-  // Validasi ini sekarang berlaku untuk status HADIR maupun WFH
   if (status === "Hadir" || status === "WFH") {
     const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
     if (!insideArea) {
@@ -1164,33 +1136,18 @@ if (!["Dinas", "Izin", "Sakit"].includes(status)) {
 
   showPopup("Mengambil foto...", "loading");
 
-  // ==========================================
-  // 1) AMBIL DATA STATUS & FOTO AWAL
-  // ==========================================
-  const statusElement = document.getElementById("status");
-  const statusAbsen = statusElement.value;
-
-  if (!statusAbsen) {
-    showPopup("Silakan pilih status absen dulu!", "error");
-    isSnapping = false;
-    return;
-  }
-
+  const statusAbsen = statusInput.value;
   const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
-  const ketElement = document.getElementById("keterangan");
-  const keteranganUser = ketElement ? ketElement.value.trim() : "";
   
   gpsSaatFoto = [...gpsData];
 
   const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-
   const ctx = canvas.getContext("2d");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-
   const fotoPreview = document.getElementById("fotoPreview");
   fotoPreview.src = fotoMurni;
   fotoPreview.style.display = "block";
@@ -1207,7 +1164,6 @@ if (!["Dinas", "Izin", "Sakit"].includes(status)) {
       const ctx2 = canvas.getContext("2d");
       ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // --- Logika Watermark ---
       const marginBottom = 20;
       const startX = 30;
       const lineHeight = 28;
@@ -1294,24 +1250,18 @@ if (!["Dinas", "Izin", "Sakit"].includes(status)) {
   }
 });
 
-// ================================
-// Restart Kamera dan Foto
-// ================================
 document.getElementById('reset').addEventListener('click', () => {
-    // 🔒 Cegah klik saat Snap sedang berlangsung
     if (isSnapping) {
         showTempPopup("⏳ Sedang memproses foto.", "warning", 1000);
         vibrateAlertShort();
         return;
     }
-
     fotoData = null;
     const fotoPreview = document.getElementById("fotoPreview");
     const video = document.getElementById("video");
     fotoPreview.src = "";
     fotoPreview.style.display = "none";
     video.style.display = "block";
-    //startWebcam();
     showPopup("Reset Foto.", "warning");
 });
 
