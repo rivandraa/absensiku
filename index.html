@@ -761,20 +761,20 @@ function stopGPSLoading() {
 let isFetchingLocation = false; 
 
 async function refreshTargetLocation(callback) {
-  // 1. CEK IDENTITAS (Cepat & Ringan)
+  // 1. CEK IDENTITAS (Safety Check)
   const userRequesting = (userData?.username) || null;
   if (!userRequesting || isFetchingLocation) {
     if (typeof callback === "function") callback();
     return;
   }
 
-  // 2. CEK STATUS (Mencegah Fetch Unnecessary)
+  // 2. CEK ELEMEN UI & STATUS
   const statusEl = document.getElementById("status");
   const currentStatus = statusEl ? statusEl.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // Jika status kosong atau tidak relevan, langsung berhenti tanpa ke server
+  // Validasi awal status
   if (!currentStatus || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status";
     targetLocation = null;
@@ -782,8 +782,9 @@ async function refreshTargetLocation(callback) {
     return;
   }
 
+  // Reset tampilan jika status adalah luar kantor (Dinas/Izin/Sakit)
   if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-    if (tampil && tampil.value !== "-") tampil.value = "-"; // Hanya update jika berbeda
+    if (tampil && tampil.value !== "-") tampil.value = "-";
     if (hidden && hidden.value !== "-") hidden.value = "-";
     targetLocation = null;
     if (typeof callback === "function") callback();
@@ -793,8 +794,7 @@ async function refreshTargetLocation(callback) {
   try {
     isFetchingLocation = true;
     
-    // Gunakan AbortController (Opsional tapi bagus untuk speed)
-    // agar jika fetch terlalu lama (> 5 detik), dia batal otomatis.
+    // Timeout 8 detik agar tidak "hanging" jika sinyal desa lemah
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -805,25 +805,35 @@ async function refreshTargetLocation(callback) {
 
     const loc = await response.json();
 
-    // 3. VALIDASI GANDA (Agar tidak salah pasang data jika user ganti status cepat)
+    // VALIDASI: Pastikan status belum berubah saat fetch selesai
     if (statusEl.value !== currentStatus) return;
 
     if (loc && loc.lat && loc.lon) {
-      const lat = parseFloat(loc.lat);
-      const lon = parseFloat(loc.lon);
+      const newLat = parseFloat(loc.lat);
+      const newLon = parseFloat(loc.lon);
       
-      // Update targetLocation di memori
-      targetLocation = { lat, lon };
-      
-      const koordinatMurni = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-      const namaBaru = loc.nama || koordinatMurni;
+      // LOGIKA REVISI: Cek apakah koordinat target berubah dari yang lama
+      const isChanged = !targetLocation || 
+                        targetLocation.lat !== newLat || 
+                        targetLocation.lon !== newLon;
 
-      // HANYA UPDATE UI JIKA DATA BERUBAH (Sangat meringankan beban HP)
-      if (tampil && tampil.value !== namaBaru) {
-        tampil.value = namaBaru;
-      }
-      if (hidden && hidden.value !== koordinatMurni) {
-        hidden.value = koordinatMurni;
+      if (isChanged) {
+        // Update memori global
+        targetLocation = { lat: newLat, lon: newLon };
+        
+        const koordinatMurni = `${newLat.toFixed(6)}, ${newLon.toFixed(6)}`;
+        const namaBaru = loc.nama || koordinatMurni;
+
+        // Update UI hanya jika teks berbeda
+        if (tampil && tampil.value !== namaBaru) tampil.value = namaBaru;
+        if (hidden && hidden.value !== koordinatMurni) hidden.value = koordinatMurni;
+
+        // --- PEMICU HITUNG JARAK OTOMATIS ---
+        // Segera hitung jarak begitu koordinat target baru didapat
+        if (typeof handleGPS === "function") {
+            console.log("Koordinat target diperbarui, memicu hitung ulang jarak...");
+            handleGPS(); 
+        }
       }
     } else {
       if (tampil) tampil.value = "Titik tidak ditemukan";
@@ -900,34 +910,47 @@ document.addEventListener("DOMContentLoaded", () => {
     const gpsHidden = document.getElementById("gpsHidden");
     if (!gpsDiv) return;
 
-    // 1. Bersihkan semua indikator lama secara instan
+    // 1. Bersihkan semua indikator lama secara instan (Regex Filter)
     let lines = gpsDiv.innerText.split("\n").filter(line => 
       !/^✅|^❌|^ℹ️|^📏|^Status:/.test(line)
     );
 
-    // 2. Berikan respon visual instan jika pilih Hadir/WFH
+    // 2. Logika Khusus untuk Hadir / WFH
     if (newStatus === "Hadir" || newStatus === "WFH") {
-      lines.push("ℹ️ Silakan tunggu, sedang menghitung jarak Anda.");
       
-      // Update UI secepat mungkin
-      const loadingText = lines.join("\n");
-      gpsDiv.innerText = loadingText;
-      if (gpsHidden) gpsHidden.value = loadingText;
+      // CEK INSTAN: Gunakan data di memori agar tidak menunggu internet
+      if (gpsData[0] !== 0 && targetLocation) {
+        const dist = getDistanceFromLatLonInMeters(
+          gpsData[0], gpsData[1], 
+          targetLocation.lat, targetLocation.lon
+        );
+        const icon = dist <= RADIUS_LIMIT ? "✅" : "❌";
+        
+        // Langsung tampilkan hasil ke array lines
+        lines.push(`${icon} Jarak: ${dist.toFixed(0)}m`);
+      } else {
+        // Jika data belum ada, baru tampilkan loading
+        lines.push("ℹ️ Menghubungkan satelit...");
+      }
 
-      // 3. Picu pengambilan koordinat target (async) tanpa menunggu
+      // Jalankan refresh target di latar belakang (agar koordinat desa terbaru diambil)
       refreshTargetLocation(); 
+
     } else {
-      // Jika status lain, bersihkan popup dan reset state
+      // 3. Logika untuk status selain Hadir/WFH (Dinas, Izin, Sakit)
       forceClosePopup();
       areaErrorActive = false;
       lastInsideArea = null;
-      
-      const cleanText = lines.join("\n");
-      gpsDiv.innerText = cleanText;
-      if (gpsHidden) gpsHidden.value = cleanText;
+      // Lines tetap bersih (tanpa indikator ✅/❌)
     }
-  });
-});
+
+    // 4. Update UI Final (Satu kali jalan untuk efisiensi)
+    const finalText = lines.join("\n");
+    gpsDiv.innerText = finalText;
+    if (gpsHidden) gpsHidden.value = finalText;
+    
+  }); // Tutup listener
+}); // Tutup DOMContentLoaded
 
 // =====================================================
 // START GPS MONITORING
