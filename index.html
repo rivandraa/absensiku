@@ -799,7 +799,7 @@ async function refreshTargetLocation(callback) {
   try {
     isFetchingLocation = true; 
     // Beri tanda sedang memuat agar user tidak bingung
-    if (tampil) tampil.value = "Sedang mengambil data...";
+    //if (tampil) tampil.value = "Sedang mengambil data...";
 
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
