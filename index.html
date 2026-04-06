@@ -722,22 +722,18 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     if (currentLat === 0) return;
 
-    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
+    let displayText = "Lokasi Anda : " + lat.toFixed(6) + "," + lon.toFixed(6) + "\n";
     
-    if (acc && acc > 30) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
+    // 1. Logika Akurasi (Hanya muncul animasi jika akurasi masih buruk)
+    if (acc > MAX_ACCURACY) {
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > " + MAX_ACCURACY + " Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
-
-    if ((status === "Hadir" || status === "WFH") && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
-        const insideArea = distance <= RADIUS_LIMIT;
-        
-        // UPDATE VARIABEL GLOBAL (Sangat Penting untuk Snap)
-        lastInsideArea = insideArea;
-
+    
+    // 2. Logika Jarak (Hanya muncul jika status "Hadir" dan data lokasi desa sudah ada)
+    if (status === "Hadir" && targetLocation) {
         if (namaLokasi !== "Sedang mengambil data...") {
             displayText += insideArea
                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
@@ -746,6 +742,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
             displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
+    
     updateGPSDisplay(displayText);
 }
 
@@ -1127,29 +1124,29 @@ document.getElementById('snap').addEventListener('click', async () => {
   // ============================================================
   // 3. VALIDASI AREA ABSEN (GANTI BAGIAN INI DENGAN KODE SAYA)
   // ============================================================
-  //if (status === "Hadir" || status === "WFH") {
+//  if (status === "Hadir" || status === "WFH") {
     // Ambil koordinat GPS paling baru detik ini juga
-    //const latSekarang = gpsData[0];
-    //const lonSekarang = gpsData[1];
+//    const latSekarang = gpsData[0];
+//    const lonSekarang = gpsData[1];
     
-    //if (latSekarang === 0 || !targetLocation) {
-        //showPopup("⚠️ Koordinat belum siap, mohon tunggu.", "warning");
-        //vibrateAlertShort();
-        //isSnapping = false;
-        //return;
-    //}
+//    if (latSekarang === 0 || !targetLocation) {
+//        showPopup("⚠️ Koordinat belum siap, mohon tunggu.", "warning");
+//        vibrateAlertShort();
+//        isSnapping = false;
+//        return;
+//    }
 
     // Hitung jarak secara instan (Bukan dari teks layar, tapi dari angka GPS asli)
-    const distSekarang = getDistanceFromLatLonInMeters(latSekarang, lonSekarang, targetLocation.lat, targetLocation.lon);
-    const isInside = distSekarang <= RADIUS_LIMIT;
+//    const distSekarang = getDistanceFromLatLonInMeters(latSekarang, lonSekarang, targetLocation.lat, targetLocation.lon);
+//    const isInside = distSekarang <= RADIUS_LIMIT;
 
-    if (!isInside) {
-        showPopup(`❌ Di luar area! Jarak Anda: ${distSekarang.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`, "error");
-        vibrateAlertShort();
-        isSnapping = false;
-        return;
-    }
-  }
+//    if (!isInside) {
+//        showPopup(`❌ Di luar area! Jarak Anda: ${distSekarang.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`, "error");
+//        vibrateAlertShort();
+//        isSnapping = false;
+//        return;
+//    }
+//  }
   // ============================================================
   // AKHIR DARI PERUBAHAN
   // ============================================================
