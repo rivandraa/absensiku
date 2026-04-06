@@ -754,13 +754,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 let isFetchingLocation = false;
   
 async function refreshTargetLocation(callback) {
-    // Proteksi variabel userData
-    const currentUserName = (typeof userData !== 'undefined' && userData.username) ? userData.username : "guest";
-    
-    if (isFetchingLocation) {
-        if (typeof callback === "function") callback();
-        return;
-    }
+  const userRequesting = (userData && userData.username) ? userData.username : null;
+  if (!userRequesting || isFetchingLocation) return; 
 
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
