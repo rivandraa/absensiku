@@ -681,14 +681,6 @@ function resetGPSState() {
     targetLocation = null;
     lastTargetLocation = null;
 
-    // 5. RESET TAMPILAN UI
-    ["titikKoordinatTampil", "titikKoordinat"].forEach(id => {
-        const el = document.getElementById(id);
-        // Jika status absensi sedang kosong, lebih baik jangan tulis "Sedang mengambil..."
-        // Tapi jika ini dipanggil saat Restart, maka pesan ini sudah benar.
-        if (el) el.value = "Sedang mengambil data...";
-    });
-
       // Pastikan UI kembali ke awal
     //const gpsDiv = document.getElementById("gps");
     //if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
