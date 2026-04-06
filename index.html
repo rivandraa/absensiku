@@ -717,32 +717,25 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
-    // Gunakan parameter yang masuk atau ambil dari data global jika parameter kosong
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
-    //const currentAcc = acc || lastAcc; // Pastikan lastAcc terdefinisi saat watchPosition
 
     if (currentLat === 0) return;
 
-    // --- MULAI PENYESUAIAN MODEL TEKS ANDA ---
-    
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
-
-    // 1. Logika Akurasi (Hanya muncul animasi jika akurasi masih buruk)
-    // Menggunakan variabel MAX_ACCURACY (misal: 30)
-    if (currentAcc > MAX_ACCURACY) {
-        displayText += "Tingkat Akurasi : " + currentAcc.toFixed(0) + " Meter | > " + MAX_ACCURACY + " Meter\n" +
+    
+    if (acc && acc > 30) {
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
 
-    // 2. Logika Jarak (Hanya muncul jika status "Hadir" atau "WFH" dan lokasi desa ada)
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
         const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
         const insideArea = distance <= RADIUS_LIMIT;
         
-        // Simpan status ke variabel global untuk divalidasi saat tombol SNAP diklik
+        // UPDATE VARIABEL GLOBAL (Sangat Penting untuk Snap)
         lastInsideArea = insideArea;
 
         if (namaLokasi !== "Sedang mengambil data...") {
@@ -753,8 +746,6 @@ function forceUpdateDistanceUI(lat, lon, acc) {
             displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
-
-    // Tampilkan hasil akhir ke layar
     updateGPSDisplay(displayText);
 }
 
