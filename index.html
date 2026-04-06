@@ -722,8 +722,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     if (currentLat === 0) return;
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
-    if (acc && acc > 30) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
+    if (acc && acc > 300) {
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 300 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
@@ -1085,137 +1085,228 @@ function resetFoto(showNotif = false) {
 // ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
 // ================================
+let fotoTimestamp = null;
 let isSnapping = false;
+
+document.getElementById('snap').addEventListener('click', async () => { // Tambahkan async untuk mendukung fetch waktu
+  if (isSnapping) {
+    showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
+    vibrateAlertShort();
+    return;
+  }
+  isSnapping = true;
+
+  const video = document.getElementById('video');
+  const statusInput = document.getElementById("status");
+  const status = statusInput ? statusInput.value : "";
+  const ketField = document.getElementById("keterangan");
+  const keterangan = ketField ? ketField.value.trim() : "";
+  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+
+  // Mendefinisikan variabel tampil agar bisa dibaca valuenya
+  const tampil = document.getElementById("titikKoordinatTampil");
+
+  // VALIDASI STATUS KOSONG
+  if (!status) {
+    showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    statusInput.focus();
+    return;
+  }
+
+  // VALIDASI KETERANGAN WAJIB (izin/sakit/dinas)
+  const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
+  if (ketWajib && !keterangan) {
+    showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
+    vibrateAlertShort();
+    ketField.focus();
+    ketField.scrollIntoView({ behavior: "smooth", block: "center" });
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI FOTO
+  if (fotoData) {
+    showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // VALIDASI KAMERA
+  if (!stream) {
+    showPopup("⚠️ Kamera tidak tersedia / tidak diizinkan!", "error");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+// 1. VALIDASI GPS HP (Sinyal/Akurasi Perangkat)
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  // 2. VALIDASI DATA SPREADSHEET (Koordinat Target Absensi)
+  // Hanya cek ini jika status bukan Dinas/Izin/Sakit
+if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const koordinatValue = tampil ? tampil.value : "";
+    
+    // Jika teks di kotak input masih "Sedang mengambil data...", maka kunci tombol snap
+    if (koordinatValue === "Sedang mengambil data...") {
+      showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
+      vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+
+  // 3. VALIDASI AREA ABSEN (Jarak)
+  // Validasi ini sekarang berlaku untuk status HADIR maupun WFH
+  if (status === "Hadir" || status === "WFH") {
+    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
+    if (!insideArea) {
+      showPopup("❌ Anda di luar area absensi (" + status + ").", "error");
+      vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+
+  showPopup("Mengambil foto...", "loading");
+
+  // ==========================================
+  // 1) AMBIL DATA STATUS & FOTO AWAL
+  // ==========================================
+  const statusElement = document.getElementById("status");
+  const statusAbsen = statusElement.value;
+
+  if (!statusAbsen) {
+    showPopup("Silakan pilih status absen dulu!", "error");
+    isSnapping = false;
+    return;
+  }
+
+  const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
+  const ketElement = document.getElementById("keterangan");
+  const keteranganUser = ketElement ? ketElement.value.trim() : "";
   
-document.getElementById('snap').addEventListener('click', async () => {
-    // 1. CEK LOCK
-    if (isSnapping) {
-        showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
-        vibrateAlertShort();
-        return;
-    }
+  gpsSaatFoto = [...gpsData];
 
-    const video = document.getElementById('video');
-    const statusInput = document.getElementById("status");
-    const status = statusInput ? statusInput.value : "";
-    const ketField = document.getElementById("keterangan");
-    const keteranganUser = ketField ? ketField.value.trim() : "";
-    const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-    // =====================================================
-    // 2. VALIDASI AWAL (TIDAK MENGUNCI DULU)
-    // =====================================================
-    if (!status || status === "Pilih Status...") {
-        showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
-        vibrateAlertShort();
-        return;
-    }
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
-    if (ketWajib && !keteranganUser) {
-        showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
-        vibrateAlertShort();
-        if (ketField) ketField.focus();
-        return;
-    }
+  const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
 
-    if (fotoData) {
-        showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
-        vibrateAlertShort();
-        return;
-    }
+  const fotoPreview = document.getElementById("fotoPreview");
+  fotoPreview.src = fotoMurni;
+  fotoPreview.style.display = "block";
+  video.style.display = "none";
 
-    if (!stream) {
-        showPopup("⚠️ Kamera tidak tersedia!", "error");
-        vibrateAlertShort();
-        return;
-    }
+  showPopup("Sinkronisasi waktu server...", "loading");
 
-    if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
-        showPopup("⚠️ GPS belum siap atau sedang kalibrasi.", "warning");
-        vibrateAlertShort();
-        return;
-    }
+  try {
+    const response = await fetch(`${GAS_URL}?action=getServerTime`);
+    const serverTime = await response.json();
 
-    if (status === "Hadir" || status === "WFH") {
-        const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
-        if (!insideArea) {
-            showPopup("❌ Anda di luar area absensi.", "error");
-            vibrateAlertShort();
-            return;
+    const img = new Image();
+    img.onload = function () {
+      const ctx2 = canvas.getContext("2d");
+      ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // --- Logika Watermark ---
+      const marginBottom = 20;
+      const startX = 30;
+      const lineHeight = 28;
+      ctx2.textAlign = "left";
+      ctx2.shadowColor = "rgba(0,0,0,0.6)";
+      ctx2.shadowBlur = 3;
+
+      function getWrappedLines(c, text, maxWidth) {
+        const words = text.split(" ");
+        let lines = [], line = "";
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + " ";
+          if (c.measureText(testLine).width > maxWidth && n > 0) {
+            lines.push(line.trim());
+            line = words[n] + " ";
+          } else {
+            line = testLine;
+          }
         }
-    }
+        lines.push(line.trim());
+        return lines;
+      }
 
-    // =====================================================
-    // 3. MULAI PROSES SNAP (BARU KUNCI DI SINI)
-    // =====================================================
-    isSnapping = true; 
-    showPopup("Mengambil foto...", "loading");
+      const ketLines = keterangan ? getWrappedLines(ctx2, keterangan, canvas.width - 60) : [];
+      let totalLines = (labelStatus ? 1 : 0) + 3 + ketLines.length;
+      const totalHeight = totalLines * lineHeight;
+      let currentY = canvas.height - marginBottom;
 
-    try {
-        gpsSaatFoto = [...gpsData];
+      const gradient = ctx2.createLinearGradient(0, 0, canvas.width / 1.5, 0);
+      gradient.addColorStop(0, "rgba(0,0,0,0.4)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx2.fillStyle = gradient;
+      ctx2.fillRect(0, currentY - totalHeight, canvas.width / 1.5, totalHeight + 10);
 
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx2.strokeStyle = "#FFC107";
+      ctx2.lineWidth = 4;
+      ctx2.beginPath();
+      ctx2.moveTo(startX - 12, currentY - totalHeight);
+      ctx2.lineTo(startX - 12, currentY + 10);
+      ctx2.stroke();
 
-        const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-        const fotoPreview = document.getElementById("fotoPreview");
-        
-        fotoPreview.src = fotoMurni;
-        fotoPreview.style.display = "block";
-        video.style.display = "none";
+      ctx2.fillStyle = "#FFFFFF";
+      if (ketLines.length > 0) {
+        for (let i = ketLines.length - 1; i >= 0; i--) {
+          ctx2.font = "20px Arial";
+          ctx2.fillText(ketLines[i], startX, currentY);
+          currentY -= lineHeight;
+        }
+      }
+      ctx2.font = "20px Arial";
+      ctx2.fillText(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`, startX, currentY);
+      currentY -= lineHeight;
+      ctx2.font = "22px Arial";
+      ctx2.fillText(`${serverTime.tanggal} | ${serverTime.hari}`, startX, currentY);
+      currentY -= lineHeight;
+      ctx2.font = "bold 23px Arial";
+      ctx2.fillText(serverTime.waktu + " WITA", startX, currentY);
+      currentY -= lineHeight;
+      if (labelStatus) {
+        ctx2.font = "bold 24px Arial";
+        ctx2.fillStyle = "#FFC107";
+        ctx2.fillText(labelStatus, startX, currentY);
+      }
 
-        // SYNC WAKTU SERVER
-        showPopup("Sinkronisasi waktu...", "loading");
-        const response = await fetch(`${GAS_URL}?action=getServerTime`);
-        if (!response.ok) throw new Error("Gagal ambil waktu server");
-        const serverTime = await response.json();
+      const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
+      fotoData = {
+        name: `${userData?.nama || "user"}_${serverTime.full}.jpeg`,
+        base64: finalFoto.split(",")[1],
+        type: "image/jpeg",
+        gps: gpsSaatFoto,
+        waktuServerISO: serverTime.iso
+      };
 
-        // PROSES WATERMARK
-        const img = new Image();
-        img.onload = function () {
-            try {
-                const ctx2 = canvas.getContext("2d");
-                ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+      fotoPreview.src = finalFoto;
+      showPopup("Foto berhasil diambil ✅", "success", 1000);
+      isSnapping = false;
+    };
+    img.src = fotoMurni;
 
-                // --- Logika Watermark (Ringkas) ---
-                const labelStatus = (status === "Hadir" || status === "Dinas" || status === "WFH") ? status.toUpperCase() : "";
-                
-                // (Gunakan logika penggambaran teks Anda di sini...)
-                // Contoh simpel teks:
-                ctx2.fillStyle = "white";
-                ctx2.font = "bold 20px Arial";
-                ctx2.fillText(serverTime.waktu + " WITA", 30, canvas.height - 50);
-                
-                const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
-                fotoData = {
-                    name: `${userData?.nama || "user"}_${serverTime.full}.jpeg`,
-                    base64: finalFoto.split(",")[1],
-                    type: "image/jpeg",
-                    gps: gpsSaatFoto,
-                    waktuServerISO: serverTime.iso
-                };
-
-                fotoPreview.src = finalFoto;
-                showPopup("Foto berhasil diambil ✅", "success", 1000);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                isSnapping = false; // BUKA KUNCI SETELAH SELESAI
-            }
-        };
-        img.onerror = () => { isSnapping = false; };
-        img.src = fotoMurni;
-
-    } catch (err) {
-        console.error("Snap Error:", err);
-        showPopup("❌ Gagal: Koneksi bermasalah", "error");
-        isSnapping = false; // BUKA KUNCI JIKA FETCH GAGAL
-        resetFoto(); 
-    }
+  } catch (err) {
+    showPopup("❌ Gagal sinkronisasi waktu!", "error");
+    isSnapping = false;
+    if (typeof resetFoto === "function") resetFoto(); 
+  }
 });
 
 // ================================
