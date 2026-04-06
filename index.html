@@ -759,30 +759,17 @@ function stopGPSLoading() {
 // REFRESH TARGET LOCATION (ambil ulang dari spreadsheet)
 // =====================================================
 let isFetchingLocation = false;
-const locationCache = {}; 
 
 async function refreshTargetLocation(callback) {
-  // 1. SAFETY CHECK: Pastikan variabel global sudah siap
-  // Gunakan optional chaining (?.) agar tidak crash jika userData null
-  const userRequesting = (typeof userData !== 'undefined' && userData?.username) ? userData.username : null;
-  
-  // Pastikan GAS_URL terdefinisi
-  if (typeof GAS_URL === 'undefined') {
-      console.error("GAS_URL belum didefinisikan!");
-      return;
-  }
-
-  if (!userRequesting || isFetchingLocation) {
-    if (typeof callback === "function") callback();
-    return;
-  }
+  const userRequesting = (userData && userData.username) ? userData.username : null;
+  if (!userRequesting || isFetchingLocation) return; 
 
   const statusInput = document.getElementById("status");
   const currentStatus = statusInput ? statusInput.value : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const hidden = document.getElementById("titikKoordinat");
 
-  // 2. Validasi status
+  // 1. Validasi Awal
   if (!currentStatus || currentStatus === "" || currentStatus === "Pilih Status...") {
     if (tampil) tampil.value = "⚠️ Pilih Status terlebih dahulu";
     targetLocation = null;
@@ -798,39 +785,39 @@ async function refreshTargetLocation(callback) {
     return;
   }
 
-  // 3. CEK CACHE
+  // 2. LOGIKA CACHE: Langsung pakai jika sudah ada (Instan!)
   const cacheKey = `${userRequesting}_${currentStatus}`;
   if (locationCache[cacheKey]) {
-    const loc = locationCache[cacheKey];
-    targetLocation = loc.coords;
-    if (tampil) tampil.value = loc.nama;
-    if (hidden) hidden.value = loc.raw;
+    const cachedData = locationCache[cacheKey];
+    targetLocation = cachedData.coords;
+    if (tampil) tampil.value = cachedData.nama;
+    if (hidden) hidden.value = cachedData.raw;
     if (typeof callback === "function") callback();
-    return;
+    return; 
   }
 
   try {
-    isFetchingLocation = true;
+    isFetchingLocation = true; 
+    // Beri tanda sedang memuat agar user tidak bingung
     if (tampil) tampil.value = "Sedang mengambil data...";
 
     const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
     
     const response = await fetch(url);
-    
-    // Cek jika response fetch gagal (Network Error)
-    if (!response.ok) throw new Error("Network response was not ok");
-    
     const loc = await response.json();
 
-    // Proteksi perpindahan status cepat
-    const statusSaatIni = document.getElementById("status") ? document.getElementById("status").value : "";
-    if (statusSaatIni !== currentStatus) return;
+    const statusSaatIni = document.getElementById("status").value;
+    if (statusSaatIni !== currentStatus) {
+       isFetchingLocation = false;
+       return; 
+    }
 
     if (loc && loc.lat && loc.lon) {
       const coords = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
       const raw = `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
       const namaDisplay = loc.nama || raw;
 
+      // SIMPAN KE CACHE
       locationCache[cacheKey] = {
         coords: coords,
         nama: namaDisplay,
@@ -840,6 +827,7 @@ async function refreshTargetLocation(callback) {
       targetLocation = coords;
       if (tampil) tampil.value = namaDisplay;
       if (hidden) hidden.value = raw;
+      
     } else {
       if (tampil) tampil.value = "Titik koordinat tidak ditemukan";
       targetLocation = null;
@@ -847,9 +835,9 @@ async function refreshTargetLocation(callback) {
 
   } catch (error) {
     console.error("Gagal mengambil lokasi:", error);
-    if (tampil) tampil.value = "Gagal memuat koordinat (Cek Koneksi)";
+    if (tampil) tampil.value = "Gagal memuat koordinat";
   } finally {
-    isFetchingLocation = false;
+    isFetchingLocation = false; 
     if (typeof callback === "function") callback();
   }
 }
