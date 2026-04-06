@@ -716,14 +716,14 @@ function resetGPSState() {
 document.getElementById("restartGPS").addEventListener("click", () => {
     // 1. Matikan sistem secara total lebih dulu
     gpsSystemActive = false;
-    
+    stopGPSMonitoring();
+
     // Ubah tampilan tombol agar user tahu proses sedang berjalan
     const btn = document.getElementById("restartGPS");
     btn.innerHTML = "⏳ Mengatur Ulang...";
     btn.disabled = true;
 
     // 2. Bersihkan semua interval dan watcher
-    stopGPSMonitoring();
 
     // 3. Beri jeda sedikit lebih lama (500ms) agar hardware GPS di HP sempat "istirahat"
     setTimeout(() => {
@@ -740,7 +740,7 @@ document.getElementById("restartGPS").addEventListener("click", () => {
         if (typeof showPopup === "function") {
             showPopup("GPS Berhasil Direstart", "success", 2000);
         }
-    }, 500); 
+    }, 100); 
 });
 
 // =====================================================
