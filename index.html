@@ -607,274 +607,322 @@ async function isGPSEnabledUniversal() {
 }
 
 // =====================================================
-// KONFIGURASI & STATE GLOBAL
-// =====================================================
-// =====================================================
-// 1. KONFIGURASI & STATE GLOBAL (FIXED)
+// KONFIGURASI & STATE GLOBAL 
 // =====================================================
 let gpsWatcherId = null;
 let gpsMonitorInterval = null;
-let gpsLoadingInterval = null;
-let accAnim = null;
+let gpsLoadingInterval = null; 
+let gpsImproveInterval = null;
+let accuracyCycleTimer = null;
 let gpsData = [0, 0];
-let gpsErrorActive = false;
+let gpsErrorActive = false; 
 let animatingGPS = false;
+let improvingAccuracy = false;
 let wasGPSEnabled = null;
 let accDots = 0;
+let accAnim = null; 
 let lastGPSEnabled = null;
-let targetLocation = null;
+let lastTargetLocation = null;
+let areaErrorActive = false;
+let lastInsideArea = null;
+let targetLocation = null; 
 let gpsSystemActive = false;
-let isFetchingLocation = false;
-
-const RADIUS_LIMIT = 30; // meter [cite: 135]
-const MAX_ACCURACY = 300; // meter [cite: 135]
-
-// State Kamera & Foto
-let stream = null; 
-let gpsSaatFoto = [0, 0]; [cite: 200]
-let fotoData = null;
-let isStarting = false; 
-let isSnapping = false; [cite: 216]
+const RADIUS_LIMIT = 30; // meter 
+const MAX_ACCURACY = 300; // meter 
 
 // =====================================================
-// 2. SISTEM GPS & MONITORING
+// START & STOP GPS 
 // =====================================================
 function startGPS() {
     gpsSystemActive = true;
-    refreshTargetLocation(() => {
+    refreshTargetLocation(() => { 
         if (!gpsSystemActive) return;
         startGPSMonitoring();
-    }); [cite: 137]
-}
+    });
+} 
 
 function stopGPSMonitoring() {
     gpsSystemActive = false;
     resetGPSState();
-    if (typeof forceClosePopup === "function") forceClosePopup(); [cite: 139]
-}
+    if (typeof forceClosePopup === "function") forceClosePopup();
+} 
 
 function resetGPSState() {
-    [gpsMonitorInterval, gpsLoadingInterval, accAnim].forEach(int => {
+    [gpsMonitorInterval, gpsLoadingInterval, gpsImproveInterval, accAnim].forEach(int => {
         if (int !== null) clearInterval(int);
     });
-    gpsMonitorInterval = gpsLoadingInterval = accAnim = null; [cite: 140]
+    gpsMonitorInterval = gpsLoadingInterval = gpsImproveInterval = accAnim = null;
+
+    if (accuracyCycleTimer !== null) {
+        clearTimeout(accuracyCycleTimer);
+        accuracyCycleTimer = null; 
+    }
 
     if (gpsWatcherId !== null) {
         navigator.geolocation.clearWatch(gpsWatcherId);
-        gpsWatcherId = null; [cite: 142]
+        gpsWatcherId = null; 
     }
 
+    isFetchingLocation = false; 
+    accDots = 0;
+    areaErrorActive = false;
+    lastInsideArea = null;
     gpsData = [0, 0];
+    gpsErrorActive = false; 
     animatingGPS = false;
-    isFetchingLocation = false;
+    improvingAccuracy = false;
+    wasGPSEnabled = null;
+    lastGPSEnabled = null;
+    targetLocation = null;
+    lastTargetLocation = null; 
+
     updateGPSDisplay("Silakan tunggu...");
 }
 
+// =====================================================
+// UI UPDATE & ANIMATION 
+// =====================================================
 function updateGPSDisplay(text) {
     const gpsDiv = document.getElementById("gps");
-    const gpsHidden = document.getElementById("gpsHidden");
-    if (gpsDiv) gpsDiv.innerText = text;
-    if (gpsHidden) gpsHidden.value = text; [cite: 145, 146]
+    const gpsHidden = document.getElementById("gpsHidden"); 
+    if (gpsDiv) {
+        gpsDiv.innerText = text;
+        gpsDiv.style.height = "auto";
+    } 
+    if (gpsHidden) gpsHidden.value = text;
 }
 
 function startGPSLoading() {
     animatingGPS = true;
     let dots = 0;
-    if (gpsLoadingInterval) clearInterval(gpsLoadingInterval);
-    gpsLoadingInterval = setInterval(() => {
+    stopGPSLoading();
+    gpsLoadingInterval = setInterval(() => { 
         dots = (dots + 1) % 4;
         updateGPSDisplay("Sedang mencari lokasi" + ".".repeat(dots));
-    }, 500); [cite: 147]
+    }, 500);
 }
 
 function stopGPSLoading() {
     if (gpsLoadingInterval) clearInterval(gpsLoadingInterval);
     gpsLoadingInterval = null;
-    animatingGPS = false; [cite: 149]
+    animatingGPS = false;
 }
-
 // =====================================================
-// 3. LOGIKA JARAK & TARGET (ANTI-DELAY)
+// FUNGSI HITUNG INSTAN (ANTI-DELAY)
 // =====================================================
 function forceUpdateDistanceUI(lat, lon, acc) {
-    const status = document.getElementById("status")?.value || "";
-    const namaLokasi = document.getElementById("titikKoordinatTampil")?.value || "Area Absensi"; [cite: 151]
+    const statusInput = document.getElementById("status");
+    const status = statusInput ? statusInput.value : ""; 
+    const elNama = document.getElementById("titikKoordinatTampil");
+    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi"; 
 
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
     const currentAcc = acc || 0;
 
     if (currentLat === 0) return;
-
-    let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`; [cite: 153]
-    
-    if (currentAcc > MAX_ACCURACY) {
-        displayText += `Tingkat Akurasi : ${currentAcc.toFixed(0)} m | > ${MAX_ACCURACY} m\nSedang meningkatkan akurasi${".".repeat(accDots)}`; [cite: 154]
-    } else {
-        displayText += `Tingkat Akurasi : ${currentAcc.toFixed(0)} m ✅ (Terkunci)\n`; [cite: 156]
-    }
+    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n"; 
+    if (currentAcc > MAX_ACCURACY) { 
+        displayText += "Tingkat Akurasi : " + currentAcc.toFixed(0) + " Meter | > " + MAX_ACCURACY + " Meter\n" +
+                       "Sedang meningkatkan akurasi" + ".".repeat(accDots);
+    } else { 
+        displayText += "Tingkat Akurasi : " + currentAcc.toFixed(0) + " Meter ✅ (Terkunci)\n";
+    } 
     
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
-        const insideArea = distance <= RADIUS_LIMIT; [cite: 157]
-        displayText += insideArea 
-            ? `\n✅ Berada dalam area/radius ${namaLokasi}` 
-            : `\n❌ Di luar area\n📏 Jarak ${distance.toFixed(0)} m (Max. ${RADIUS_LIMIT} m)`; [cite: 158]
+        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon); 
+        const insideArea = distance <= RADIUS_LIMIT;
+    
+        displayText += insideArea ? 
+            `\n✅ Berada dalam area/radius ${namaLokasi}`
+            : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
     }
+    
     updateGPSDisplay(displayText);
 }
 
-async function refreshTargetLocation(callback) {
-    const userRequesting = (typeof currentUserName !== 'undefined') ? currentUserName : (userData?.username || null);
-    if (!userRequesting || isFetchingLocation) return; [cite: 161]
-
-    const statusInput = document.getElementById("status");
+// =====================================================
+// REFRESH TARGET LOCATION 
+// =====================================================
+let isFetchingLocation = false;
+async function refreshTargetLocation(callback) { 
+  const userRequesting = (typeof currentUserName !== 'undefined') ? currentUserName : (userData?.username || null);
+  if (!userRequesting || isFetchingLocation) return;
+  const statusInput = document.getElementById("status"); 
     const currentStatus = statusInput ? statusInput.value : "";
     const tampil = document.getElementById("titikKoordinatTampil");
-
-    if (!currentStatus || currentStatus === "Pilih Status...") {
+    const hidden = document.getElementById("titikKoordinat");
+    if (!currentStatus || currentStatus === "Pilih Status...") { 
         if (tampil) tampil.value = "⚠️ Pilih Status";
         targetLocation = null;
-        if (callback) callback(); return;
+        if (typeof callback === "function") callback();
+        return;
+    }
+    
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        targetLocation = null;
+        lastTargetLocation = null;
+        if (typeof callback === "function") callback();
+        return;
     }
 
     try {
         isFetchingLocation = true;
-        const response = await fetch(`${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`);
-        const loc = await response.json(); [cite: 167]
+        const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
+        const response = await fetch(url);
+        const loc = await response.json();
 
         if (loc && loc.lat && loc.lon) {
-            targetLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) }; [cite: 168]
-            if (tampil) tampil.value = loc.nama || `${targetLocation.lat}, ${targetLocation.lon}`;
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+            const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+            targetLocation = newLocation;
+            lastTargetLocation = newLocation;
+
+            const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
+            if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni; 
+            if (hidden) hidden.value = koordinatMurni;
+            if (gpsData[0] !== 0) forceUpdateDistanceUI(); 
+
+        } else {
+            targetLocation = null;
+            if (tampil) tampil.value = "Titik tidak ditemukan";
         }
-    } catch (e) { console.error("Gagal ambil lokasi:", e); } 
-    finally { isFetchingLocation = false; if (callback) callback(); } [cite: 173]
+    } catch (error) {
+        console.error("Gagal mengambil lokasi:", error);
+    } finally {
+        isFetchingLocation = false;
+        if (typeof callback === "function") callback();
+    }
 }
 
+// =====================================================
+// CALCULATION LOGIC
+// =====================================================
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
     const R = 6371000;
-    const toRad = d => d * Math.PI / 180;
+    const toRad = deg => deg * Math.PI / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); [cite: 177]
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
 }
 
-function checkUserLocation(lat, lon) {
+function checkUserLocation(lat, lon, status) {
     if (!targetLocation) return false;
-    return getDistanceFromLatLonInMeters(lat, lon, targetLocation.lat, targetLocation.lon) <= RADIUS_LIMIT; [cite: 179]
+    const dist = getDistanceFromLatLonInMeters(lat, lon, targetLocation.lat, targetLocation.lon);
+    return dist <= RADIUS_LIMIT;
 }
 
 // =====================================================
-// 4. WATCHER & ANIMASI AKURASI
+// MONITORING & WATCHER
 // =====================================================
 function startGPSMonitoring() {
-    if (!navigator.geolocation) return updateGPSDisplay("⚠️ GPS tidak tersedia"); [cite: 181]
+    const gpsDiv = document.getElementById("gps");
+    if (!gpsDiv) return;
+
+    gpsData = [0, 0];
+    lastInsideArea = null;
+    areaErrorActive = false;
+    updateGPSDisplay("Sedang mencari lokasi");
     startGPSLoading();
 
-    function startWatch() {
-        if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
-        gpsWatcherId = navigator.geolocation.watchPosition(pos => {
-            const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
+    if (!navigator.geolocation) {
+        stopGPSLoading();
+        updateGPSDisplay("⚠️ GPS tidak tersedia");
+        return;
+    }
+
+    async function handleGPS() {
+        const gpsEnabled = (typeof isGPSEnabledUniversal === "function") ?
+            await isGPSEnabledUniversal() : true;
+        if (gpsEnabled === lastGPSEnabled) return;
+        lastGPSEnabled = gpsEnabled;
+        if (!gpsEnabled) {
+            if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
+            gpsWatcherId = null;
             stopGPSLoading();
-            gpsData = [lat, lon];
-            if (acc > 30) {
-                if (!accAnim) startAccAnim(lat, lon, acc);
-            } else {
-                stopAccAnim();
-                forceUpdateDistanceUI(lat, lon, acc);
+            if (accAnim) { clearInterval(accAnim); accAnim = null; }
+            gpsData = [0, 0];
+            updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
+            if (!gpsErrorActive) {
+                gpsErrorActive = true;
+                showPopup("⚠️ Periksa GPS Anda.", "error", false);
             }
-        }, err => { stopGPSLoading(); updateGPSDisplay("⚠️ Sinyal GPS hilang."); }, 
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }); [cite: 192, 193]
+            return;
+        }
+
+        if (!wasGPSEnabled) {
+            wasGPSEnabled = true;
+            gpsErrorActive = false;
+            if (typeof forceClosePopup === "function") forceClosePopup();
+            startGPSLoading();
+            setTimeout(() => startWatch(), 1000);
+        }
+    }
+
+    function startWatch() {
+        if (!gpsSystemActive) return;
+        if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
+        gpsWatcherId = navigator.geolocation.watchPosition(
+            pos => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const acc = pos.coords.accuracy;
+                stopGPSLoading();
+
+                if (acc > 30) {
+                    gpsData = [lat, lon];
+                    startAccAnim(lat, lon, acc);
+                } else {
+                    stopAccAnim();
+                    gpsData = [lat, lon];
+                    forceUpdateDistanceUI(lat, lon, acc);
+                }
+
+                if (gpsErrorActive) {
+                    if (typeof forceClosePopup === "function") forceClosePopup();
+                    gpsErrorActive = false;
+                }
+            },
+            err => {
+                stopAccAnim();
+                gpsData = [0, 0];
+                stopGPSLoading();
+                updateGPSDisplay("⚠️ Sinyal GPS hilang.");
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+        );
     }
 
     function startAccAnim(lat, lon, acc) {
         stopAccAnim();
+        animatingGPS = true;
         accAnim = setInterval(() => {
             accDots = (accDots + 1) % 4;
             forceUpdateDistanceUI(lat, lon, acc);
-        }, 500); [cite: 194]
+        }, 500);
     }
 
     function stopAccAnim() {
         if (accAnim) clearInterval(accAnim);
-        accAnim = null; accDots = 0; [cite: 196]
+        accAnim = null;
+        accDots = 0;
+        animatingGPS = false;
     }
 
-    startWatch();
-}
-
-// =====================================================
-// 5. KAMERA & SNAPSHOT (FIXED)
-// =====================================================
-async function startWebcam() {
-    if (isStarting) return; isStarting = true;
-    const video = document.getElementById('video');
-    try {
-        stopWebcam();
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }); [cite: 208]
-        video.srcObject = stream;
-        video.style.display = 'block';
-        video.play();
-    } catch (err) { showPopup("❌ Kamera Error", "error"); } 
-    finally { isStarting = false; } [cite: 212]
-}
-
-function stopWebcam() {
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    const v = document.getElementById('video');
-    if (v) { v.pause(); v.srcObject = null; v.style.display = "none"; } [cite: 203]
-}
-
-document.getElementById('snap').addEventListener('click', async () => {
-    if (isSnapping) return; isSnapping = true;
-    const status = document.getElementById("status")?.value;
-    const keterangan = document.getElementById("keterangan")?.value.trim();
-
-    // Validasi Lengkap [cite: 217, 224, 227]
-    if (!status) { showPopup("⚠️ Pilih Status!", "warning"); isSnapping = false; return; }
-    if (!stream) { showPopup("⚠️ Kamera mati!", "error"); isSnapping = false; return; }
-    if (gpsData[0] === 0) { showPopup("⚠️ Tunggu GPS...", "warning"); isSnapping = false; return; }
-    
-    if ((status === "Hadir" || status === "WFH") && !checkUserLocation(gpsData[0], gpsData[1])) {
-        showPopup("❌ Di luar area!", "error"); isSnapping = false; return;
+    setTimeout(() => handleGPS(), 400);
+    if (!gpsMonitorInterval) {
+        gpsMonitorInterval = setInterval(() => {
+            if (gpsSystemActive) handleGPS();
+        }, 3000);
     }
+}
 
-    showPopup("Proses foto...", "loading");
-    try {
-        const video = document.getElementById('video');
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0);
-
-        const res = await fetch(`${GAS_URL}?action=getServerTime`);
-        const serverTime = await res.json(); [cite: 235]
-        gpsSaatFoto = [...gpsData];
-
-        // --- Watermark --- [cite: 237]
-        ctx.fillStyle = "white";
-        ctx.shadowBlur = 3; ctx.shadowColor = "black";
-        ctx.font = "bold 24px Arial";
-        ctx.fillText(status.toUpperCase(), 30, canvas.height - 110); [cite: 254]
-        ctx.font = "20px Arial";
-        ctx.fillText(`${serverTime.waktu} WITA | ${serverTime.tanggal}`, 30, canvas.height - 80); [cite: 252]
-        ctx.fillText(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`, 30, canvas.height - 50); [cite: 251]
-        if(keterangan) ctx.fillText(keterangan.substring(0, 40), 30, canvas.height - 20);
-
-        fotoData = { base64: canvas.toDataURL("image/jpeg", 0.9).split(",")[1], gps: gpsSaatFoto }; [cite: 255]
-        document.getElementById("fotoPreview").src = canvas.toDataURL("image/jpeg");
-        document.getElementById("fotoPreview").style.display = "block";
-        video.style.display = "none";
-        showPopup("Foto Berhasil ✅", "success", 1000);
-    } catch (err) { showPopup("❌ Gagal!", "error"); } 
-    finally { isSnapping = false; }
-});
-
-// =====================================================
-// 6. INITIALIZATION
-// =====================================================
+// ====== EVENT LISTENER STATUS ======
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
@@ -883,15 +931,331 @@ document.addEventListener("DOMContentLoaded", () => {
             if (gpsData[0] !== 0) forceUpdateDistanceUI();
         });
     }
-    document.getElementById("restartGPS")?.addEventListener("click", () => {
-        stopGPSMonitoring(); startGPS();
+
+    const restartBtn = document.getElementById("restartGPS");
+    if (restartBtn) {
+        restartBtn.addEventListener("click", () => {
+            gpsSystemActive = false;
+            stopGPSMonitoring();
+            restartBtn.innerHTML = "⏳ Mengatur Ulang...";
+            restartBtn.disabled = true;
+            setTimeout(() => {
+                gpsSystemActive = true;
+                restartBtn.innerHTML = "🔄 Restart GPS";
+                restartBtn.disabled = false;
+                startGPS();
+                if (typeof showPopup === "function") showPopup("GPS Direstart", "success", 3000);
+            }, 500);
+        });
+    }
+});
+
+// =====================================================
+// KODE KAMERA & FOTO DOKUMENTASI
+// =====================================================
+let stream = null;
+let gpsSaatFoto = [0, 0];
+let fotoData = null;
+let isStarting = false;
+function stopWebcam() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  const video = document.getElementById('video');
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.load();
+    video.style.display = "none";
+  }
+}
+
+async function startWebcam() {
+  if (isStarting) return;
+  isStarting = true;
+
+  const video = document.getElementById('video');
+  const preview = document.getElementById('fotoPreview');
+  const container = document.getElementById('cameraContainer');
+  const btn = document.getElementById('restartCamera');
+
+  if (btn) btn.disabled = true;
+
+  try {
+    resetFoto();
+    stopWebcam();
+    preview.style.display = 'none';
+    video.style.display = 'none';
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const hasCamera = devices.some(d => d.kind === 'videoinput');
+    if (!hasCamera) {
+      showPopup("📷 Tidak ada kamera terdeteksi.", "error");
+      return;
+    }
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user' },
+      audio: false
     });
-    document.getElementById("restartCamera")?.addEventListener("click", startWebcam);
-    document.getElementById("reset")?.addEventListener("click", () => {
-        fotoData = null;
-        document.getElementById("fotoPreview").style.display = "none";
-        document.getElementById("video").style.display = "block";
+    video.srcObject = stream;
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => {
+        video.play().then(resolve).catch(reject);
+      };
     });
+    video.style.display = 'block';
+    const aspect = video.videoHeight / video.videoWidth;
+    if (aspect && isFinite(aspect)) {
+      container.style.height = `${container.offsetWidth * aspect}px`;
+    }
+  } catch (err) {
+    console.error("Kamera Error:", err);
+    showPopup("❌ Gagal akses kamera: " + err.message, "error");
+    stopWebcam();
+  } finally {
+    isStarting = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.getElementById("restartCamera").addEventListener("click", async function () {
+  this.innerHTML = "⏳ Starting...";
+  this.disabled = true;
+  await startWebcam();
+  setTimeout(() => {
+    this.innerHTML = "📷 Start/Restart Kamera";
+    this.disabled = false;
+  }, 500);
+});
+
+function resetFoto(showNotif = false) {
+  fotoData = null;
+  const fotoPreview = document.getElementById("fotoPreview");
+  const video = document.getElementById("video");
+  if (fotoPreview) { fotoPreview.src = ""; fotoPreview.style.display = "none"; }
+  if (video) { video.style.display = "block"; }
+  if (showNotif) showPopup("⚠️ Foto berhasil direset.", "warning");
+}
+
+// ================================
+// TOMBOL SNAP
+// ================================
+let fotoTimestamp = null;
+let isSnapping = false;
+
+document.getElementById('snap').addEventListener('click', async () => {
+  if (isSnapping) {
+    if (typeof showTempPopup === "function") showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    return;
+  }
+  isSnapping = true;
+
+  const video = document.getElementById('video');
+  const statusInput = document.getElementById("status");
+  const status = statusInput ? statusInput.value : "";
+  const ketField = document.getElementById("keterangan");
+  const keterangan = ketField ? ketField.value.trim() : "";
+  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+
+  if (!status) {
+    showPopup("⚠️ Pilih Status Absen terlebih dahulu.", "warning");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    isSnapping = false;
+    statusInput.focus();
+    return;
+  }
+
+  const ketWajib = ["izin", "sakit", "dinas"].includes(status.toLowerCase());
+  if (ketWajib && !keterangan) {
+    showPopup("⚠️ Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    ketField.focus();
+    ketField.scrollIntoView({ behavior: "smooth", block: "center" });
+    isSnapping = false;
+    return;
+  }
+
+  if (fotoData) {
+    showPopup("⚠️ Tekan tombol Reset dahulu.", "warning");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  if (!stream) {
+    showPopup("⚠️ Kamera tidak tersedia / tidak diizinkan!", "error");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
+    if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  if (!["Dinas", "Izin", "Sakit"].includes(status)) {
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const koordinatValue = tampil ? tampil.value : "";
+    if (koordinatValue === "Sedang mengambil data...") {
+      showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
+      if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+
+  if (status === "Hadir" || status === "WFH") {
+    const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
+    if (!insideArea) {
+      showPopup("❌ Anda di luar area absensi (" + status + ").", "error");
+      if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+      isSnapping = false;
+      return;
+    }
+  }
+
+  showPopup("Mengambil foto...", "loading");
+  const statusElement = document.getElementById("status");
+  const statusAbsen = statusElement.value;
+
+  if (!statusAbsen) {
+    showPopup("Silakan pilih status absen dulu!", "error");
+    isSnapping = false;
+    return;
+  }
+
+  const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
+  const ketElement = document.getElementById("keterangan");
+  const keteranganUser = ketElement ? ketElement.value.trim() : "";
+  
+  gpsSaatFoto = [...gpsData];
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
+  const fotoPreview = document.getElementById("fotoPreview");
+  fotoPreview.src = fotoMurni;
+  fotoPreview.style.display = "block";
+  video.style.display = "none";
+
+  showPopup("Sinkronisasi waktu server...", "loading");
+  try {
+    const response = await fetch(`${GAS_URL}?action=getServerTime`);
+    const serverTime = await response.json();
+
+    const img = new Image();
+    img.onload = function () {
+      const ctx2 = canvas.getContext("2d");
+      ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const marginBottom = 20;
+      const startX = 30;
+      const lineHeight = 28;
+      ctx2.textAlign = "left";
+      ctx2.shadowColor = "rgba(0,0,0,0.6)";
+      ctx2.shadowBlur = 3;
+      
+      function getWrappedLines(c, text, maxWidth) {
+        const words = text.split(" ");
+        let lines = [], line = "";
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + " ";
+          if (c.measureText(testLine).width > maxWidth && n > 0) {
+            lines.push(line.trim());
+            line = words[n] + " ";
+          } else {
+            line = testLine;
+          }
+        }
+        lines.push(line.trim());
+        return lines;
+      }
+
+      const ketLines = keterangan ? getWrappedLines(ctx2, keterangan, canvas.width - 60) : [];
+      let totalLines = (labelStatus ? 1 : 0) + 3 + ketLines.length;
+      const totalHeight = totalLines * lineHeight;
+      let currentY = canvas.height - marginBottom;
+
+      const gradient = ctx2.createLinearGradient(0, 0, canvas.width / 1.5, 0);
+      gradient.addColorStop(0, "rgba(0,0,0,0.4)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx2.fillStyle = gradient;
+      ctx2.fillRect(0, currentY - totalHeight, canvas.width / 1.5, totalHeight + 10);
+
+      ctx2.strokeStyle = "#FFC107";
+      ctx2.lineWidth = 4;
+      ctx2.beginPath();
+      ctx2.moveTo(startX - 12, currentY - totalHeight);
+      ctx2.lineTo(startX - 12, currentY + 10);
+      ctx2.stroke();
+
+      ctx2.fillStyle = "#FFFFFF";
+      if (ketLines.length > 0) {
+        for (let i = ketLines.length - 1; i >= 0; i--) {
+          ctx2.font = "20px Arial";
+          ctx2.fillText(ketLines[i], startX, currentY);
+          currentY -= lineHeight;
+        }
+      }
+      ctx2.font = "20px Arial";
+      ctx2.fillText(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`, startX, currentY);
+      currentY -= lineHeight;
+      ctx2.font = "22px Arial";
+      ctx2.fillText(`${serverTime.tanggal} | ${serverTime.hari}`, startX, currentY);
+      currentY -= lineHeight;
+      ctx2.font = "bold 23px Arial";
+      ctx2.fillText(serverTime.waktu + " WITA", startX, currentY);
+      currentY -= lineHeight;
+      if (labelStatus) {
+        ctx2.font = "bold 24px Arial";
+        ctx2.fillStyle = "#FFC107";
+        ctx2.fillText(labelStatus, startX, currentY);
+      }
+
+      const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
+      fotoData = {
+        name: `${(typeof userData !== 'undefined' && userData.nama) ? userData.nama : "user"}_${serverTime.full}.jpeg`,
+        base64: finalFoto.split(",")[1],
+        type: "image/jpeg",
+        gps: gpsSaatFoto,
+        waktuServerISO: serverTime.iso
+      };
+      fotoPreview.src = finalFoto;
+      showPopup("Foto berhasil diambil ✅", "success", 1000);
+      isSnapping = false;
+    };
+    img.src = fotoMurni;
+  } catch (err) {
+    showPopup("❌ Gagal sinkronisasi waktu!", "error");
+    isSnapping = false;
+    resetFoto();
+  }
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+    if (isSnapping) {
+        if (typeof showTempPopup === "function") showTempPopup("⏳ Sedang memproses foto.", "warning", 1000);
+        if (typeof vibrateAlertShort === "function") vibrateAlertShort();
+        return;
+    }
+    fotoData = null;
+    const fotoPreview = document.getElementById("fotoPreview");
+    const video = document.getElementById("video");
+    if (fotoPreview) { fotoPreview.src = ""; fotoPreview.style.display = "none"; }
+    if (video) video.style.display = "block";
+    showPopup("Reset Foto.", "warning");
 });
 
 /* =========================================================================================================
