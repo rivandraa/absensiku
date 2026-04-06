@@ -721,7 +721,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     // Gunakan parameter yang masuk atau ambil dari data global jika parameter kosong
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
-    const currentAcc = acc || lastAcc; // Pastikan lastAcc terdefinisi saat watchPosition
+    const currentAcc = acc || 0;
 
     if (currentLat === 0) return;
 
