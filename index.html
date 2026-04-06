@@ -679,7 +679,7 @@ function resetGPSState() {
     targetLocation = null;
     lastTargetLocation = null;
 
-    updateGPSDisplay("Silakan tunggu...");
+    //updateGPSDisplay("Silakan tunggu...");
 }
 
 // =====================================================
@@ -972,7 +972,7 @@ document.addEventListener("DOMContentLoaded", () => {
             gpsSystemActive = true;
             btn.innerHTML = "🔄 Restart GPS";
             btn.disabled = false;
-            startGPSMonitoring();
+            startGPS();
             if (typeof showPopup === "function") showPopup("GPS Direstart", "success", 3000);
         }, 500);
     });
