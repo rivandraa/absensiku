@@ -1085,10 +1085,9 @@ function resetFoto(showNotif = false) {
 // ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
 // ================================
-let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', () => {
+document.getElementById('snap').addEventListener('click', async () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
