@@ -795,6 +795,7 @@ async function refreshTargetLocation(callback) {
         if (hidden) hidden.value = "-";
         targetLocation = null;
         lastTargetLocation = null;
+        forceUpdateDistanceUI();
         if (typeof callback === "function") callback();
         return; 
     }
