@@ -704,7 +704,14 @@ function resetGPSState() {
 
     // TAMBAHKAN INI: Pastikan flag fetch di-reset
     isFetchingLocation = false; 
-    
+
+      // reset tampilan
+    ["titikKoordinatTampil", "titikKoordinat"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "Sedang mengambil data...";
+    });
+    updateGPSDisplay("Silakan tunggu...");
+  
     // Pastikan UI kembali ke awal
     //const gpsDiv = document.getElementById("gps");
     //if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
