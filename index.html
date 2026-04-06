@@ -1085,9 +1085,10 @@ function resetFoto(showNotif = false) {
 // ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
 // ================================
+let fotoTimestamp = null;
 let isSnapping = false;
 
-document.getElementById('snap').addEventListener('click', async () => {
+document.getElementById('snap').addEventListener('click', () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
     vibrateAlertShort();
@@ -1138,6 +1139,14 @@ document.getElementById('snap').addEventListener('click', async () => {
     return;
   }
 
+  // VALIDASI GPS
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
   // VALIDASI AREA ABSEN
   if (status === "Hadir") {
     const insideArea = checkUserLocation(gpsData[0], gpsData[1], status);
@@ -1148,55 +1157,6 @@ document.getElementById('snap').addEventListener('click', async () => {
       return;
     }
   }
-
-  // 1. VALIDASI GPS HP (Tetap Gunakan Kode Aslimu)
-  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
-    showPopup("⚠️ GPS sedang mencari lokasi atau meningkatkan akurasi.", "warning");
-    vibrateAlertShort();
-    isSnapping = false;
-    return;
-  }
-
-  // 2. VALIDASI DATA SPREADSHEET (Tetap Gunakan Kode Aslimu)
-  if (!["Dinas", "Izin", "Sakit"].includes(status)) {
-    const tampil = document.getElementById("titikKoordinatTampil");
-    if (tampil && tampil.value === "Sedang mengambil data...") {
-      showPopup("⚠️ Mohon tunggu, sedang mengambil titik koordinat absensi...", "warning");
-      vibrateAlertShort();
-      isSnapping = false;
-      return;
-    }
-  }
-
-  // ============================================================
-  // 3. VALIDASI AREA ABSEN (GANTI BAGIAN INI DENGAN KODE SAYA)
-  // ============================================================
-  if (status === "Hadir" || status === "WFH") {
-    // Ambil koordinat GPS paling baru detik ini juga
-    const latSekarang = gpsData[0];
-    const lonSekarang = gpsData[1];
-    
-    if (latSekarang === 0 || !targetLocation) {
-        showPopup("⚠️ Koordinat belum siap, mohon tunggu.", "warning");
-        vibrateAlertShort();
-        isSnapping = false;
-        return;
-    }
-
-    // Hitung jarak secara instan (Bukan dari teks layar, tapi dari angka GPS asli)
-    const distSekarang = getDistanceFromLatLonInMeters(latSekarang, lonSekarang, targetLocation.lat, targetLocation.lon);
-    const isInside = distSekarang <= RADIUS_LIMIT;
-
-    if (!isInside) {
-        showPopup(`❌ Di luar area! Jarak Anda: ${distSekarang.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`, "error");
-        vibrateAlertShort();
-        isSnapping = false;
-        return;
-    }
-  }
-  // ============================================================
-  // AKHIR DARI PERUBAHAN
-  // ============================================================
 
   showPopup("Mengambil foto...", "loading");
 
