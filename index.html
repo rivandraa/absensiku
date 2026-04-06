@@ -1085,6 +1085,8 @@ function resetFoto(showNotif = false) {
 // ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
 // ================================
+let isSnapping = false;
+  
 document.getElementById('snap').addEventListener('click', async () => {
     // 1. CEK LOCK
     if (isSnapping) {
