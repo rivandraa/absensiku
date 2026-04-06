@@ -688,12 +688,12 @@ function resetGPSState() {
         // Tapi jika ini dipanggil saat Restart, maka pesan ini sudah benar.
         if (el) el.value = "Sedang mengambil data...";
     });
-    
-    updateGPSDisplay("Silakan tunggu...");
-  
-    // Pastikan UI kembali ke awal
+
+      // Pastikan UI kembali ke awal
     //const gpsDiv = document.getElementById("gps");
     //if (gpsDiv) gpsDiv.innerText = "Sedang mencari lokasi...";
+  
+    updateGPSDisplay("Silakan tunggu...");
 }
 
 // =====================================================
