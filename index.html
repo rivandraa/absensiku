@@ -1093,7 +1093,6 @@ document.getElementById('snap').addEventListener('click', async () => {
     vibrateAlertShort();
     return;
   }
-  isSnapping = true;
 
   const video = document.getElementById('video');
   const statusInput = document.getElementById("status");
@@ -1156,7 +1155,7 @@ document.getElementById('snap').addEventListener('click', async () => {
       return;
     }
   }
-
+  isSnapping = true;
   showPopup("Mengambil foto...", "loading");
 
   // ==========================================
