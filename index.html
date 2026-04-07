@@ -771,110 +771,65 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // REFRESH TARGET LOCATION
 // =====================================================
 let isFetchingLocation = false;
-
 async function refreshTargetLocation(callback) {
     const userRequesting = (userData && userData.username) ? userData.username : null;
+    if (!userRequesting || isFetchingLocation) {
+        if (typeof callback === "function") callback();
+        return;
+    }
 
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
     const tampil = document.getElementById("titikKoordinatTampil");
     const hidden = document.getElementById("titikKoordinat");
 
-    // =============================
-    // VALIDASI STATUS KOSONG
-    // =============================
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
         targetLocation = null;
         if (typeof callback === "function") callback();
         return;
     }
-
-    // =============================
-    // 🔥 PRIORITAS: MODE TANPA LOKASI
-    // =============================
-    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-        console.log("MODE TANPA LOKASI AKTIF");
-
-        if (tampil && tampil.value !== "-") tampil.value = "-";
-        if (hidden && hidden.value !== "-") hidden.value = "-";
-
+    
+    if (currentStatus && currentStatus.trim().toLowerCase() === "dinas") {
+        console.log("MODE DINAS AKTIF");
+    
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+    
         targetLocation = null;
         lastTargetLocation = null;
-
-        // hentikan GPS
-        if (gpsWatcherId) {
-            navigator.geolocation.clearWatch(gpsWatcherId);
-            gpsWatcherId = null;
-        }
-
-        if (gpsMonitorInterval) {
-            clearInterval(gpsMonitorInterval);
-            gpsMonitorInterval = null;
-        }
-
-        // 🔥 penting: reset fetching supaya tidak nyangkut
-        isFetchingLocation = false;
-
-        if (typeof callback === "function") callback();
-        return;
-    }
-
-    // =============================
-    // CEK USER & FETCH LOCK
-    // =============================
-    if (!userRequesting || isFetchingLocation) {
+    
+        // opsional: reset gps jarak
+        // gpsData = [0, 0];
+    
+        forceUpdateDistanceUI();
+    
         if (typeof callback === "function") callback();
         return;
     }
 
     try {
         isFetchingLocation = true;
-
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
 
-        // 🔥 ANTI RACE CONDITION (WAJIB)
-        const statusSekarang = document.getElementById("status").value;
-        if (statusSekarang !== currentStatus) {
-            return;
-        }
-
-        // 🔥 JANGAN TIMPA kalau tiba-tiba jadi Dinas
-        if (["Dinas", "Izin", "Sakit"].includes(statusSekarang)) {
-            return;
-        }
-
         if (loc && loc.lat && loc.lon) {
-            const newLocation = {
-                lat: parseFloat(loc.lat),
-                lon: parseFloat(loc.lon)
-            };
-
+            const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
             targetLocation = newLocation;
             lastTargetLocation = newLocation;
 
             const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
-
-            if (tampil) {
-                tampil.value = (loc.nama && loc.nama.trim() !== "")
-                    ? loc.nama
-                    : koordinatMurni;
-            }
-
+            if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
 
-            // update jarak jika GPS sudah ada
-            if (gpsData[0] !== 0) {
-                forceUpdateDistanceUI();
-            }
+            // INSTAN: Jika GPS sudah ada, langsung hitung detik ini juga
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
 
         } else {
             targetLocation = null;
             if (tampil) tampil.value = "Titik tidak ditemukan";
         }
-
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
@@ -882,7 +837,6 @@ async function refreshTargetLocation(callback) {
         if (typeof callback === "function") callback();
     }
 }
-
 
 // =====================================================
 // CALCULATION LOGIC
