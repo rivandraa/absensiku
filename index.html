@@ -493,15 +493,15 @@ async function loginUser() {
 
     // Pengganti google.script.run
     try {
-        const response = await fetch(GAS_URL, {
-            method: "POST", // Menggunakan POST agar aman mengirim hash
-            mode: "no-cors", // Penting untuk menghindari blokir CORS di GAS
-            body: JSON.stringify({
-                action: "checkLogin",
-                username: username,
-                passwordHash: passwordHash
-            })
-        });
+        //const response = await fetch(GAS_URL, {
+            //method: "POST", // Menggunakan POST agar aman mengirim hash
+            //mode: "no-cors", // Penting untuk menghindari blokir CORS di GAS
+            //body: JSON.stringify({
+                //action: "checkLogin",
+                //username: username,
+                //passwordHash: passwordHash
+            //})
+        //});
 
         /* CATATAN: Karena GAS menggunakan redirect, fetch dengan mode 'no-cors' 
            tidak bisa membaca body response secara langsung. 
