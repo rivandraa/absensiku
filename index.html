@@ -958,7 +958,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             refreshTargetLocation();
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
         });
     }
 
