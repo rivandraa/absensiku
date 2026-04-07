@@ -718,11 +718,9 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
-    
-    // 1. Ambil nilai mentah untuk pengecekan
-    const namaLokasiRaw = elNama ? elNama.value : "";
-    const namaLokasi = (namaLokasiRaw && namaLokasiRaw.trim() !== "") ? namaLokasiRaw : "Area Absensi";
+    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
+    // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
 
@@ -730,6 +728,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
     
+    // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > 30) {
         displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
@@ -737,38 +736,23 @@ function forceUpdateDistanceUI(lat, lon, acc) {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
 
-    // 2. Logika Jarak & Status
-    if ((status === "Hadir" || status === "WFH")) {
-        // CEK: Jika koordinat target belum ada, tampilkan pesan menunggu
-        if (!targetLocation || namaLokasiRaw === "Sedang mengambil data...") {
-            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
-            lastInsideArea = false; // Kunci tombol kamera selama loading
-        } else {
-            const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
-            const insideArea = distance <= RADIUS_LIMIT;
-            lastInsideArea = insideArea;
+    if ((status === "Hadir" || status === "WFH") && targetLocation) {
+        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
+        const insideArea = distance <= RADIUS_LIMIT;
+        
+        // Update global state secara instan
+        lastInsideArea = insideArea;
 
+        if (namaLokasi !== "Sedang mengambil data...") {
             displayText += insideArea
                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
+        } else {
+            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
 
     updateGPSDisplay(displayText);
-
-    // 3. Kontrol Tombol Kamera
-    const btnKamera = document.getElementById("btnKamera");
-    if (btnKamera) {
-        if ((status === "Hadir" || status === "WFH")) {
-            // Tombol aktif hanya jika sudah di dalam area DAN tidak sedang loading
-            const isLoading = (!targetLocation || namaLokasiRaw === "Sedang mengambil data...");
-            btnKamera.disabled = isLoading || !lastInsideArea;
-            btnKamera.style.opacity = (isLoading || !lastInsideArea) ? "0.5" : "1";
-        } else {
-            btnKamera.disabled = false;
-            btnKamera.style.opacity = "1";
-        }
-    }
 }
 
 // =====================================================
@@ -967,7 +951,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            //refreshTargetLocation();
+            refreshTargetLocation();
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
             setTimeout(() => {
