@@ -720,6 +720,13 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
+  // Guard Clause: Jika status adalah pengecualian, pastikan tetap "-" dan berhenti
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        return; 
+    }
+  
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
@@ -951,6 +958,7 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
+  // === status ===
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
 
@@ -968,29 +976,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
-  
-document.addEventListener("DOMContentLoaded", () => {
-    const statusEl = document.getElementById("status");
-    
-    if (statusEl) {
-        statusEl.addEventListener("change", () => {
-            // 1. Matikan sistem yang berjalan saat ini
-            gpsSystemActive = false;
-            stopGPSMonitoring(); 
 
-            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation();
+  // === restart gps ===
+    document.getElementById("restartGPS")?.addEventListener("click", () => {
+        gpsSystemActive = false;
+        stopGPSMonitoring();
+        const btn = document.getElementById("restartGPS");
+        btn.innerHTML = "⏳ Mengatur Ulang...";
+        btn.disabled = true;
 
-            // 3. Beri jeda 500ms sebelum menghidupkan kembali
-            setTimeout(() => {
-                gpsSystemActive = true;
-                // Panggil startGPS() saja, karena di dalam startGPS 
-                // sudah ada perintah gpsSystemActive = true
-                startGPS(); 
-
-            }, 500);
-        });
-    }
+        setTimeout(() => {
+            gpsSystemActive = true;
+            btn.innerHTML = "🔄 Restart GPS";
+            btn.disabled = false;
+            startGPSMonitoring();
+            if (typeof showPopup === "function") showPopup("GPS Direstart", "success", 3000);
+        }, 500);
+    });
 });
 
 /* =========================================================================================================
