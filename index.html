@@ -1251,12 +1251,15 @@ document.getElementById('snap').addEventListener('click', async () => {
 	
 	    // Persiapan Variabel untuk Watermark
 	    const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
-	    const finalKeterangan = keteranganUser ? keteranganUser : "-";
+		const ketElement = document.getElementById("keterangan");
+		const keteranganUser = ketElement ? ketElement.value.trim() : "";
+		const finalKeterangan = keteranganUser ? keteranganUser : "-";
 	    const jamTampil = serverTime.waktu + " WITA";
 	    const tanggalServer = serverTime.tanggal;
 	    const hariServer = serverTime.hari;
 	    const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
-	    const gpsSaatFoto = [...gpsData];
+
+		gpsSaatFoto = [...gpsData];
 	
 	    const img = new Image();
 	    img.src = fotoMurni;
