@@ -964,10 +964,13 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
-statusEl.addEventListener("change", async () => { // Tambahkan async di sini
-    await refreshTargetLocation(); // Tambahkan await di sini
-    if (gpsData[0] !== 0) {
-        forceUpdateDistanceUI();
+statusEl.addEventListener("change", async () => {
+    await refreshTargetLocation(); 
+    
+    // Pastikan gpsData memiliki koordinat yang valid sebelum update UI
+    if (gpsData && gpsData[0] !== 0) {
+        // Kirim data GPS ke fungsi agar perhitungan jarak akurat
+        forceUpdateDistanceUI(gpsData[0], gpsData[1], gpsData[2]);
     }
 });
   
