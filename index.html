@@ -778,9 +778,7 @@ async function refreshTargetLocation(callback) {
         return;
     }
 
-    lastInsideArea = null;
-    targetLocation = null;
-    lastTargetLocation = null;
+resetGPSState();
   
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
