@@ -790,8 +790,8 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    if (currentStatus && currentStatus.trim().toLowerCase() === "dinas") {
-        console.log("MODE DINAS AKTIF");
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus.trim())) {
+        console.log("MODE TANPA LOKASI");
     
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
@@ -799,10 +799,10 @@ async function refreshTargetLocation(callback) {
         targetLocation = null;
         lastTargetLocation = null;
     
-        // opsional: reset gps jarak
-        // gpsData = [0, 0];
-    
-        forceUpdateDistanceUI();
+        // penting: pastikan UI tidak pakai data lama
+        if (typeof forceUpdateDistanceUI === "function") {
+            forceUpdateDistanceUI(true); // kalau bisa kasih flag reset
+        }
     
         if (typeof callback === "function") callback();
         return;
