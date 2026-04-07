@@ -968,16 +968,10 @@ function startGPSMonitoring() {
     }
 }
 
-// ====== EVENT LISTENER STATUS ======
-statusEl.addEventListener("change", async () => {
-    // Tambahkan 'await' agar kode menunggu sampai tanda "-" selesai diatur
-    await refreshTargetLocation(); 
-    
-    // Panggil update UI tanpa syarat if (gpsData[0] !== 0) 
-    // agar tampilan tetap segar meskipun GPS belum aktif
-    forceUpdateDistanceUI(); 
-});
-
+    // ====== EVENT LISTENER STATUS ======
+    document.getElementById("status").addEventListener("change", () => {
+        refreshTargetLocation();
+    });
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
