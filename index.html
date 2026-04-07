@@ -644,7 +644,6 @@ function resetGPSState() {
         gpsWatcherId = null;
     }
 
-    isFetchingLocation = false; 
     accDots = 0;
     areaErrorActive = false;
     lastInsideArea = null;
@@ -751,10 +750,10 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
-let isFetchingLocation = false;
+
 async function refreshTargetLocation(callback) {
     const userRequesting = (userData && userData.username) ? userData.username : null;
-    if (!userRequesting || isFetchingLocation) {
+    if (!userRequesting) {
         if (typeof callback === "function") callback();
         return;
     }
@@ -780,7 +779,6 @@ async function refreshTargetLocation(callback) {
     }
 
     try {
-        isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
@@ -804,7 +802,6 @@ async function refreshTargetLocation(callback) {
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
-        isFetchingLocation = false;
         if (typeof callback === "function") callback();
     }
 }
