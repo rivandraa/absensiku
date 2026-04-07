@@ -613,8 +613,8 @@ const RADIUS_LIMIT = 30; // meter
 // START & STOP GPS
 // =====================================================
 function startGPS(onReady) {
-    gpsSystemActive = true;
-    refreshTargetLocation();
+    gpsSystemActive = true
+
     // 🔥 langsung nyalakan GPS dulu
     startGPSMonitoring(onReady);
 
@@ -992,13 +992,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         restartBtn.innerHTML = "⏳ Sedang Restart...";
         restartBtn.disabled = true;
-
+        refreshTargetLocation();
         startGPS(() => {
             restartBtn.innerHTML = "🔄 Restart GPS";
             restartBtn.disabled = false;
 
             if (typeof showPopup === "function") {
-                showPopup("GPS berhasil di-restart.", "success", 3000);
+                showPopup("GPS berhasil di-restart.", "success", 5000);
             	}
         	});
     	});
