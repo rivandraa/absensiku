@@ -778,6 +778,10 @@ async function refreshTargetLocation(callback) {
         return;
     }
 
+    lastInsideArea = null;
+    targetLocation = null;
+    lastTargetLocation = null;
+  
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
     const tampil = document.getElementById("titikKoordinatTampil");
@@ -795,14 +799,8 @@ async function refreshTargetLocation(callback) {
     
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-    
-        targetLocation = null;
-        lastTargetLocation = null;
-    
-        // 🔥 penting: hentikan fetch yang sedang berjalan
-        isFetchingLocation = false;
-    
-        if (typeof callback === "function") callback();
+
+      if (typeof callback === "function") callback();
         return;
     }
 
