@@ -778,8 +778,6 @@ async function refreshTargetLocation(callback) {
         return;
     }
 
-resetGPSState();
-  
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
     const tampil = document.getElementById("titikKoordinatTampil");
@@ -797,7 +795,7 @@ resetGPSState();
     
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-
+        resetGPSState();
       if (typeof callback === "function") callback();
         return;
     }
