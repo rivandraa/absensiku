@@ -955,14 +955,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-            // Kita panggil refreshTargetLocation
-            // Dan kita masukkan forceUpdateDistanceUI ke dalam callback-nya
-            refreshTargetLocation(() => {
-                forceUpdateDistanceUI();
-            });
+            refreshTargetLocation();
         });
     }
-});
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
