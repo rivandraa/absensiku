@@ -489,21 +489,6 @@ async function loginUser() {
 
     showPopup("Memproses login...", "loading");
 
-    const passwordHash = await hashPassword(password);
-
-async function loginUser() {
-    hideAlerts(); 
-
-    const username = $('#username').val().trim();
-    const password = $('#password').val().trim();
-
-    if (!username || !password) {
-        showPopup("Username dan Password harus diisi!", "error");
-        return;
-    }
-
-    showPopup("Memproses login...", "loading");
-
     try {
         // 1. Hashing password dilakukan secara lokal (cepat)
         const passwordHash = await hashPassword(password);
