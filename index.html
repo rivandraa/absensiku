@@ -958,40 +958,58 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
-  // === status ===
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
+    const restartBtn = document.getElementById("restartGPS");
 
+    // --- Logic untuk Perubahan Status ---
     if (statusEl) {
-        // Gunakan async pada callback listener
-        statusEl.addEventListener("change", async () => {
+        statusEl.addEventListener("change", () => {
+            // 1. Matikan sistem (Gunakan window. jika variabel bersifat global)
+            if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = false;
             
-            // 1. Jalankan refresh lokasi dan tunggu sampai selesai (await)
-            await refreshTargetLocation();
+            // Pastikan fungsi stop ada sebelum dipanggil
+            if (typeof stopGPSMonitoring === "function") stopGPSMonitoring(); 
 
-            // 2. Setelah selesai, baru jalankan update UI jarak jika GPS aktif
-            if (gpsData[0] !== 0) {
-                forceUpdateDistanceUI(gpsData[0], gpsData[1], gpsData[2]);
-            }
+            // 2. Refresh data target
+            if (typeof refreshTargetLocation === "function") refreshTargetLocation();
+
+            // 3. Jeda 500ms
+            setTimeout(() => {
+                if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = true;
+                
+                // Cukup panggil startGPS jika fungsinya tersedia
+                if (typeof startGPS === "function") {
+                    startGPS();
+                }
+            }, 500);
         });
     }
 
-  // === restart gps ===
-    document.getElementById("restartGPS")?.addEventListener("click", () => {
-        gpsSystemActive = false;
-        stopGPSMonitoring();
-        const btn = document.getElementById("restartGPS");
-        btn.innerHTML = "⏳ Mengatur Ulang...";
-        btn.disabled = true;
+    // --- Logic untuk Restart GPS ---
+    if (restartBtn) {
+        restartBtn.addEventListener("click", () => {
+            if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = false;
+            if (typeof stopGPSMonitoring === "function") stopGPSMonitoring();
 
-        setTimeout(() => {
-            gpsSystemActive = true;
-            btn.innerHTML = "🔄 Restart GPS";
-            btn.disabled = false;
-            startGPSMonitoring();
-            if (typeof showPopup === "function") showPopup("GPS Direstart", "success", 3000);
-        }, 500);
-    });
+            const originalText = restartBtn.innerHTML;
+            restartBtn.innerHTML = "⏳ Mengatur Ulang...";
+            restartBtn.disabled = true;
+
+            setTimeout(() => {
+                if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = true;
+                
+                restartBtn.innerHTML = originalText; // Mengembalikan ke teks asli
+                restartBtn.disabled = false;
+
+                if (typeof startGPSMonitoring === "function") startGPSMonitoring();
+                
+                if (typeof showPopup === "function") {
+                    showPopup("GPS Direstart", "success", 3000);
+                }
+            }, 500);
+        });
+    }
 });
 
 /* =========================================================================================================
