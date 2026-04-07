@@ -791,8 +791,8 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    if (["Dinas", "Izin", "Sakit"].includes(currentStatus.trim())) {
-        console.log("MODE TANPA LOKASI");
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+        console.log("SET KOORDINAT KE -");
     
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
@@ -800,10 +800,12 @@ async function refreshTargetLocation(callback) {
         targetLocation = null;
         lastTargetLocation = null;
     
-        // penting: pastikan UI tidak pakai data lama
-        if (typeof forceUpdateDistanceUI === "function") {
-            forceUpdateDistanceUI(true); // kalau bisa kasih flag reset
-        }
+        // 🔥 penting: hentikan fetch yang sedang berjalan
+        isFetchingLocation = false;
+    
+        if (typeof callback === "function") callback();
+        return;
+    }
     
         if (typeof callback === "function") callback();
         return;
