@@ -630,11 +630,13 @@ const RADIUS_LIMIT = 30; // meter
 // =====================================================
 // START & STOP GPS
 // =====================================================
-function startGPS() {
+function startGPS(onReady) {
     gpsSystemActive = true;
+
     refreshTargetLocation(() => {
         if (!gpsSystemActive) return;
-        startGPSMonitoring();
+
+        startGPSMonitoring(onReady); // 🔥 teruskan callback
     });
 }
 
@@ -851,9 +853,11 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
 // =====================================================
 // MONITORING & WATCHER
 // =====================================================
-function startGPSMonitoring() {
+function startGPSMonitoring(onReady) {
     const gpsDiv = document.getElementById("gps");
     if (!gpsDiv) return;
+
+    let firstFix = false; // 🔥 PENANDA GPS SIAP
 
     gpsData = [0, 0];
     lastInsideArea = null;
@@ -864,6 +868,8 @@ function startGPSMonitoring() {
     if (!navigator.geolocation) {
         stopGPSLoading();
         updateGPSDisplay("⚠️ GPS tidak tersedia");
+
+        if (typeof onReady === "function") onReady(); // 🔥 fallback
         return;
     }
 
@@ -879,10 +885,13 @@ function startGPSMonitoring() {
             if (accAnim) { clearInterval(accAnim); accAnim = null; }
             gpsData = [0, 0];
             updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
+
             if (!gpsErrorActive) {
                 gpsErrorActive = true;
                 showPopup("⚠️ Periksa GPS Anda.", "error", false);
             }
+
+            if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
             return;
         }
 
@@ -904,7 +913,17 @@ function startGPSMonitoring() {
                 const lat = pos.coords.latitude;
                 const lon = pos.coords.longitude;
                 const acc = pos.coords.accuracy;
+
                 stopGPSLoading();
+
+                // 🔥 FIRST FIX (INI KUNCI)
+                if (!firstFix) {
+                    firstFix = true;
+
+                    if (typeof onReady === "function") {
+                        onReady(); // tombol aktif lagi di sini
+                    }
+                }
 
                 if (acc > 30) {
                     gpsData = [lat, lon];
@@ -912,7 +931,6 @@ function startGPSMonitoring() {
                 } else {
                     stopAccAnim();
                     gpsData = [lat, lon];
-                    // INSTAN: Update UI segera saat koordinat masuk
                     forceUpdateDistanceUI(lat, lon, acc);
                 }
 
@@ -926,10 +944,16 @@ function startGPSMonitoring() {
                 gpsData = [0, 0];
                 stopGPSLoading();
                 updateGPSDisplay("⚠️ Sinyal GPS hilang.");
+
+                if (typeof onReady === "function") onReady(); // 🔥 fallback
             },
             { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
         );
     }
+
+//    handleGPS();
+//}
+
 
     function startAccAnim(lat, lon, acc) {
         stopAccAnim();
@@ -982,27 +1006,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // === restart gps ===
-    if (restartBtn) {
-        restartBtn.addEventListener("click", () => {
-            gpsSystemActive = false;
-            stopGPSMonitoring();
-            
-            restartBtn.innerHTML = "⏳ Mengatur Ulang...";
-            restartBtn.disabled = true;
+	if (restartBtn) {
+    restartBtn.addEventListener("click", () => {
+        gpsSystemActive = false;
+        stopGPSMonitoring();
 
-            setTimeout(() => {
-                gpsSystemActive = true;
-                restartBtn.innerHTML = "🔄 Restart GPS";
-                restartBtn.disabled = false;
-                startGPS();
-                
-                if (typeof showPopup === "function") {
-                    showPopup("GPS Direstart", "success", 3000);
-                }
-            }, 500);
+        restartBtn.innerHTML = "⏳ Mengatur Ulang...";
+        restartBtn.disabled = true;
+
+        startGPS(() => {
+            restartBtn.innerHTML = "🔄 Restart GPS";
+            restartBtn.disabled = false;
+
+            if (typeof showPopup === "function") {
+                showPopup("GPS akan segera di restart, silakan tunggu.", "success", 5000);
+            }
         });
-    }
-});
+    });
+}
 
 /* =========================================================================================================
     BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REDESAIN + ERROR MAPPING)
@@ -1162,6 +1183,7 @@ document.getElementById('snap').addEventListener('click', async () => {
     return;
   }
 
+  // VALIDASI KAMERA
   if (!stream) {
     showPopup("️ Kamera tidak tersedia / tidak diizinkan!", "error");
     vibrateAlertShort();
@@ -1169,8 +1191,8 @@ document.getElementById('snap').addEventListener('click', async () => {
     return;
   }
 
-  // 2. VALIDASI GPS & RADIUS
-  if (gpsData[0] === 0 || animatingGPS) {
+  //  VALIDASI GPS & RADIUS
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
     showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
     vibrateAlertShort();
     isSnapping = false;
