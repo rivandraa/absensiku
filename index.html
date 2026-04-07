@@ -954,11 +954,10 @@ function startGPSMonitoring() {
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
-        statusEl.addEventListener("change", () => {
-            refreshTargetLocation();
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+        statusEl.addEventListener("change", async () => {
+            await refreshTargetLocation(); // Tunggu sampai fungsi di atas selesai memproses tanda "-"
+            forceUpdateDistanceUI();       // Pastikan layar digambar ulang
         });
-    }
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
