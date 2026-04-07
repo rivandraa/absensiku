@@ -1250,7 +1250,8 @@ document.getElementById('snap').addEventListener('click', async () => {
 	    const serverTime = await response.json();
 	
 	    // Persiapan Variabel untuk Watermark
-	    const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
+	    const statusEl = document.getElementById("status");
+		const labelStatus = statusEl && statusEl.value ? statusEl.value.toUpperCase() : "";
 		const ketElement = document.getElementById("keterangan");
 		const keteranganUser = ketElement ? ketElement.value.trim() : "";
 		const finalKeterangan = keteranganUser ? keteranganUser : "-";
