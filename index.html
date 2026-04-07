@@ -171,12 +171,28 @@ body.locked {
         <!-- GPS -->
         <div class="form-group mb-3">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label for="gps" style="margin:0;">🛰️ Lokasi (GPS)</label>
-        <button type="button" id="restartGPS" class="btn-gps">
-          🔄 Restart GPS
-        </button>
+            <label for="gps" style="margin:0;">🛰️ Lokasi (GPS)</label>
+            <button type="button" id="restartGPS" class="btn-gps">
+              🔄 Restart GPS
+            </button>
           </div>          
-          <div id="gps" class="form-control" style="margin-top:8px; height:auto; max-height:500px; overflow-y:auto; white-space:pre-wrap; font-family:inherit; border:1px solid #ccc; padding:8px;" readonly>Silakan tunggu...</div>
+          
+          <div id="gps" class="form-control" 
+               style="margin-top:8px; 
+                      height: 120px; 
+                      overflow-y: auto; 
+                      white-space: pre-wrap; 
+                      font-family: monospace; 
+                      font-size: 13px; 
+                      line-height: 1.4;
+                      border: 1px solid #ccc; 
+                      padding: 10px;
+                      background-color: #f8f9fa;
+                      -webkit-text-size-adjust: none;
+                      text-size-adjust: none;" 
+               readonly>
+            Silakan tunggu...
+          </div>
           <input type="hidden" id="gpsHidden" name="gps">
         </div>
 
