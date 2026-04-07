@@ -695,55 +695,53 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
-
-    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
+    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Sedang mengambil data...";
 
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
 
-    if (!currentLat || currentLat === 0) return;
+    if (currentLat === 0) return;
 
-    let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
-
-    // ===============================
-    // AKURASI
-    // ===============================
+    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
+    
+    // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > 30) {
-        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > 30 Meter\n` +
-                       `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
+                       "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
 
-    // ===============================
-    // JARAK
-    // ===============================
-    if ((status === "Hadir" || status === "WFH")) {
+    if ((status === "Hadir" || status === "WFH") && targetLocation) {
+        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
+        const insideArea = distance <= RADIUS_LIMIT;
+        
+        // Update global state secara instan
+        lastInsideArea = insideArea;
 
-        // 🔥 Kalau lokasi belum siap
-        if (!lokasiLoaded || !targetLocation) {
-            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
-        } else {
-            const distance = getDistanceFromLatLonInMeters(
-                currentLat,
-                currentLon,
-                targetLocation.lat,
-                targetLocation.lon
-            );
-
-            const insideArea = distance <= RADIUS_LIMIT;
-
-            // Update global state
-            lastInsideArea = insideArea;
-
+        if (namaLokasi !== "Sedang mengambil data...") {
             displayText += insideArea
                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
+        } else {
+            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
 
     updateGPSDisplay(displayText);
+
+    // Kunci tombol kamera secara instan jika ada
+    const btnKamera = document.getElementById("btnKamera");
+    if (btnKamera) {
+        if ((status === "Hadir" || status === "WFH")) {
+            btnKamera.disabled = !lastInsideArea;
+            btnKamera.style.opacity = lastInsideArea ? "1" : "0.5";
+        } else {
+            btnKamera.disabled = false;
+            btnKamera.style.opacity = "1";
+        }
+    }
 }
 
 // =====================================================
@@ -771,13 +769,21 @@ async function refreshTargetLocation(callback) {
     }
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-      if (tampil) tampil.value = "-";
-      if (hidden) hidden.value = "-";
-      targetLocation = null;
-      if (typeof callback === "function") callback();
-      return;
+        // 1. Bersihkan variabel targetLocation TERLEBIH DAHULU
+        targetLocation = null; 
+        
+        // 2. Update tampilan UI secara paksa
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        
+        // 3. Panggil update UI Jarak agar dia tahu target sudah null
+        if (typeof forceUpdateDistanceUI === "function") {
+            forceUpdateDistanceUI(); 
+        }
+        
+        if (typeof callback === "function") callback();
+        return; // Keluar dari fungsi agar tidak lanjut ke fetch
     }
-
     try {
         isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
