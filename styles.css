@@ -193,7 +193,7 @@ body {
 textarea.form-control {
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 10px;
+    padding: 6px 8px;
     line-height: 1.4;
     resize: none;
     overflow: hidden;
