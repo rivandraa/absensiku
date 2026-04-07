@@ -695,19 +695,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
-    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Sedang mengambil data...";
+    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
-// PROTEKSI KEDIPAN: Jika status bukan Hadir/WFH, langsung set tampilan ke "-"
-    if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        const elNama = document.getElementById("titikKoordinatTampil");
-        const elHidden = document.getElementById("titikKoordinat");
-        if (elNama) elNama.value = "-";
-        if (elHidden) elHidden.value = "-";
-        updateGPSDisplay("Status: " + status + "\nTidak memerlukan koordinat absensi.");
-        
-        return; // BERHENTI DI SINI, jangan lanjut ke logika hitung jarak
-    }
-    
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
@@ -945,7 +934,7 @@ function startGPSMonitoring() {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
             refreshTargetLocation();
-        }, 3000);
+        }, 5000);
     }
 }
 
@@ -961,7 +950,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation();
+            //refreshTargetLocation();
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
             setTimeout(() => {
