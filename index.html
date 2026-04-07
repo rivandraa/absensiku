@@ -969,11 +969,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     const restartBtn = document.getElementById("restartGPS");
 
-    if (statusEl) {
-        statusEl.addEventListener("change", () => {
-            await refreshTargetLocation();
-        });
-    }
+if (statusEl) {
+    statusEl.addEventListener("change", async () => { 
+        // 1. Matikan sistem sebentar (Penting agar tidak bentrok saat koordinat transisi ke "-")
+        gpsSystemActive = false;
+        if (typeof stopGPSMonitoring === "function") stopGPSMonitoring();
+
+        // 2. Tunggu refresh sampai beres (termasuk status Dinas/Izin/Sakit)
+        await refreshTargetLocation();
+
+        // 3. Hidupkan otomatis
+        setTimeout(() => {
+            gpsSystemActive = true;
+            if (typeof startGPS === "function") startGPS();
+        }, 500);
+    });
+}
 
     // === restart gps ===
     if (restartBtn) {
