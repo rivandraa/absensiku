@@ -177,22 +177,22 @@ body.locked {
             </button>
           </div>          
           
-          <div id="gps" class="form-control" 
-               style="margin-top:8px; 
-                      height: 120px; 
-                      overflow-y: auto; 
-                      white-space: pre-wrap; 
-                      font-family: monospace; 
-                      font-size: 13px; 
-                      line-height: 1.4;
-                      border: 1px solid #ccc; 
-                      padding: 10px;
-                      background-color: #f8f9fa;
-                      -webkit-text-size-adjust: none;
-                      text-size-adjust: none;" 
-               readonly>
-            Silakan tunggu...
-          </div>
+            <div id="gps" class="form-control" 
+                 style="margin-top:8px; 
+                        min-height: 100px; /* Kunci tinggi minimal */
+                        max-height: 500px; 
+                        overflow-y: auto; 
+                        white-space: pre-wrap; 
+                        font-family: monospace; 
+                        font-size: 14px !important; /* Paksa ukuran font tetap */
+                        line-height: 1.5; /* Jaga jarak antar baris */
+                        border: 1px solid #ccc; 
+                        padding: 8px;
+                        -webkit-text-size-adjust: none; /* KUNCI UTAMA: Mencegah font mengecil/membesar otomatis */
+                        text-size-adjust: none;" 
+                 readonly>
+              Silakan tunggu...
+            </div>
           <input type="hidden" id="gpsHidden" name="gps">
         </div>
 
