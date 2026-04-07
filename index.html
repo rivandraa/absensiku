@@ -976,6 +976,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 restartBtn.innerHTML = "🔄 Restart GPS";
                 restartBtn.disabled = false;
                 startGPSMonitoring();
+              refreshTargetLocation();
                 
                 if (typeof showPopup === "function") {
                     showPopup("GPS Direstart", "success", 3000);
