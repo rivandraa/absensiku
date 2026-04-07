@@ -770,14 +770,12 @@ async function refreshTargetLocation(callback) {
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
         // RESET TOTAL SEMUA VARIABEL KOORDINAT
-        targetLocation = null;
-        lastTargetLocation = null; // Tambahkan ini agar memori lama terhapus
         
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
     
         // Panggil update UI untuk mengunci tampilan detik ini juga
-        forceUpdateDistanceUI();
+        //forceUpdateDistanceUI();
         
         if (typeof callback === "function") callback();
         return; 
