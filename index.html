@@ -957,8 +957,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
             refreshTargetLocation();
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
         });
     }
 
