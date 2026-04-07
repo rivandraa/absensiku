@@ -718,9 +718,11 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
-    const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
+    
+    // 1. Ambil nilai mentah untuk pengecekan
+    const namaLokasiRaw = elNama ? elNama.value : "";
+    const namaLokasi = (namaLokasiRaw && namaLokasiRaw.trim() !== "") ? namaLokasiRaw : "Area Absensi";
 
-    // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
 
@@ -728,7 +730,6 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
     
-    // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > 30) {
         displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
@@ -736,30 +737,33 @@ function forceUpdateDistanceUI(lat, lon, acc) {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
 
-    if ((status === "Hadir" || status === "WFH") && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
-        const insideArea = distance <= RADIUS_LIMIT;
-        
-        // Update global state secara instan
-        lastInsideArea = insideArea;
+    // 2. Logika Jarak & Status
+    if ((status === "Hadir" || status === "WFH")) {
+        // CEK: Jika koordinat target belum ada, tampilkan pesan menunggu
+        if (!targetLocation || namaLokasiRaw === "Sedang mengambil data...") {
+            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
+            lastInsideArea = false; // Kunci tombol kamera selama loading
+        } else {
+            const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
+            const insideArea = distance <= RADIUS_LIMIT;
+            lastInsideArea = insideArea;
 
-        if (namaLokasi !== "Sedang mengambil data...") {
             displayText += insideArea
                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
-        } else {
-            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
 
     updateGPSDisplay(displayText);
 
-    // Kunci tombol kamera secara instan jika ada
+    // 3. Kontrol Tombol Kamera
     const btnKamera = document.getElementById("btnKamera");
     if (btnKamera) {
         if ((status === "Hadir" || status === "WFH")) {
-            btnKamera.disabled = !lastInsideArea;
-            btnKamera.style.opacity = lastInsideArea ? "1" : "0.5";
+            // Tombol aktif hanya jika sudah di dalam area DAN tidak sedang loading
+            const isLoading = (!targetLocation || namaLokasiRaw === "Sedang mengambil data...");
+            btnKamera.disabled = isLoading || !lastInsideArea;
+            btnKamera.style.opacity = (isLoading || !lastInsideArea) ? "0.5" : "1";
         } else {
             btnKamera.disabled = false;
             btnKamera.style.opacity = "1";
@@ -771,75 +775,62 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // REFRESH TARGET LOCATION
 // =====================================================
 let isFetchingLocation = false;
-
+  
 async function refreshTargetLocation(callback) {
-    // Membungkus seluruh logika dalam Promise agar 'await' tahu kapan proses SELESAI
-    return new Promise(async (resolve) => {
-        
-        const userRequesting = (userData && userData.username) ? userData.username : null;
+    const userRequesting = (userData && userData.username) ? userData.username : null;
+    if (!userRequesting || isFetchingLocation) {
+        if (typeof callback === "function") callback();
+        return;
+    }
 
-        if (!userRequesting || isFetchingLocation) {
-            if (typeof callback === "function") callback();
-            resolve(); // Selesaikan await
-            return;
-        }
+    const statusInput = document.getElementById("status");
+    const currentStatus = statusInput ? statusInput.value : "";
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const hidden = document.getElementById("titikKoordinat");
 
-        const statusInput = document.getElementById("status");
-        const currentStatus = statusInput ? statusInput.value : "";
-        const tampil = document.getElementById("titikKoordinatTampil");
-        const hidden = document.getElementById("titikKoordinat");
+    if (!currentStatus || currentStatus === "Pilih Status...") {
+        if (tampil) tampil.value = "⚠️ Pilih Status";
+        targetLocation = null;
+        if (typeof callback === "function") callback();
+        return;
+    }
+    
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+      if (tampil) tampil.value = "-";
+      if (hidden) hidden.value = "-";
+      targetLocation = null;
+      if (typeof callback === "function") callback();
+      return;
+    }
 
-        if (!currentStatus || currentStatus === "Pilih Status...") {
-            if (tampil) tampil.value = "⚠️ Pilih Status";
+    try {
+        isFetchingLocation = true;
+        const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
+        const response = await fetch(url);
+        const loc = await response.json();
+
+        if (loc && loc.lat && loc.lon) {
+            const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
+            targetLocation = newLocation;
+            lastTargetLocation = newLocation;
+
+            const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
+            if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
+            if (hidden) hidden.value = koordinatMurni;
+
+            // INSTAN: Jika GPS sudah ada, langsung hitung detik ini juga
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+
+        } else {
             targetLocation = null;
-            if (typeof callback === "function") callback();
-            resolve(); // Selesaikan await
-            return;
+            if (tampil) tampil.value = "Titik tidak ditemukan";
         }
-        
-        if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-            if (tampil) tampil.value = "-";
-            if (hidden) hidden.value = "-";
-            targetLocation = null;
-            
-            // Langsung update UI agar tidak perlu restart manual
-            if (typeof forceUpdateDistanceUI === "function") forceUpdateDistanceUI(); 
-            
-            if (typeof callback === "function") callback();
-            resolve(); // Selesaikan await
-            return;
-        }
-
-        try {
-            isFetchingLocation = true;
-            const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
-            const response = await fetch(url);
-            const loc = await response.json();
-
-            if (loc && loc.lat && loc.lon) {
-                const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-                targetLocation = newLocation;
-                lastTargetLocation = newLocation;
-
-                const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
-                if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
-                if (hidden) hidden.value = koordinatMurni;
-
-                if (typeof gpsData !== 'undefined' && gpsData[0] !== 0) {
-                    if (typeof forceUpdateDistanceUI === "function") forceUpdateDistanceUI();
-                }
-            } else {
-                targetLocation = null;
-                if (tampil) tampil.value = "Titik tidak ditemukan";
-            }
-        } catch (error) {
-            console.error("Gagal mengambil lokasi:", error);
-        } finally {
-            isFetchingLocation = false;
-            if (typeof callback === "function") callback();
-            resolve(); // Selesaikan await di akhir proses try-catch
-        }
-    });
+    } catch (error) {
+        console.error("Gagal mengambil lokasi:", error);
+    } finally {
+        isFetchingLocation = false;
+        if (typeof callback === "function") callback();
+    }
 }
   
 // =====================================================
@@ -969,13 +960,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     const restartBtn = document.getElementById("restartGPS");
 
-if (statusEl) {
-    statusEl.addEventListener("change", async () => { 
-        // 2. Tunggu refresh sampai beres (termasuk status Dinas/Izin/Sakit)
-      resetGPSState();
-        await refreshTargetLocation();
-    });
-}
+    if (statusEl) {
+        statusEl.addEventListener("change", () => {
+            // 1. Matikan sistem yang berjalan saat ini
+            gpsSystemActive = false;
+            stopGPSMonitoring(); 
+
+            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            //refreshTargetLocation();
+
+            // 3. Beri jeda 500ms sebelum menghidupkan kembali
+            setTimeout(() => {
+                gpsSystemActive = true;
+                // Panggil startGPS() saja, karena di dalam startGPS 
+                // sudah ada perintah gpsSystemActive = true
+                startGPS(); 
+            }, 500);
+        });
+    }
 
     // === restart gps ===
     if (restartBtn) {
@@ -990,8 +992,7 @@ if (statusEl) {
                 gpsSystemActive = true;
                 restartBtn.innerHTML = "🔄 Restart GPS";
                 restartBtn.disabled = false;
-                startGPSMonitoring();
-              refreshTargetLocation();
+                startGPS();
                 
                 if (typeof showPopup === "function") {
                     showPopup("GPS Direstart", "success", 3000);
