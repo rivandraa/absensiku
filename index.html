@@ -1169,142 +1169,180 @@ document.getElementById('snap').addEventListener('click', async () => {
   showPopup("Mengambil foto...", "loading");
   
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      
-      // 1. Ambil gambar murni dari video
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-    
-      // 2. Sinkronisasi Waktu Server
-      const response = await fetch(`${GAS_URL}?action=getServerTime`);
-      const serverTime = await response.json();
-    
-      // Ambil data pendukung (pastikan variabel ini ada di script Anda)
-      const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
-      const keterangan = ""; // Bisa diisi jika ada input catatan/keterangan
-      const gpsSaatFoto = [...gpsData];
-    
-      const img = new Image();
-      img.onload = function () {
-        const ctx2 = canvas.getContext("2d");
-        ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
-    
-        // --- Logika Watermark Kompleks ---
-        const marginBottom = 30;
-        const startX = 40;
-        const lineHeight = 28;
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
         
-        ctx2.textAlign = "left";
-        ctx2.shadowColor = "rgba(0,0,0,0.6)";
-        ctx2.shadowBlur = 4;
+        // 1. Ambil gambar murni dari video
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
     
-        // Fungsi pembungkus teks (Word Wrap)
-        function getWrappedLines(c, text, maxWidth) {
-          if(!text) return [];
-          const words = text.split(" ");
-          let lines = [], line = "";
-          for (let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + " ";
-            if (c.measureText(testLine).width > maxWidth && n > 0) {
-              lines.push(line.trim());
-              line = words[n] + " ";
-            } else {
-              line = testLine;
+        // 2. Sinkronisasi Waktu Server (Tetap pakai fetch sesuai kode Anda)
+        const response = await fetch(`${GAS_URL}?action=getServerTime`);
+        const serverTime = await response.json();
+    
+        // Persiapan Variabel untuk Watermark
+        const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
+        const finalKeterangan = ""; // Kosongkan jika tidak ada input keterangan
+        const jamTampil = serverTime.waktu + " WITA";
+        const tanggalServer = serverTime.tanggal;
+        const hariServer = serverTime.hari;
+        const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
+        const gpsSaatFoto = [...gpsData];
+    
+        const img = new Image();
+        img.onload = function () {
+            const ctx2 = canvas.getContext("2d");
+            ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+            // ==========================================
+            // LOGIKA WATERMARK (SAMA PERSIS 100%)
+            // ==========================================
+            const marginBottom = 20;
+            const startX = 30;
+            const paddingRight = 30;
+            const paddingBox = 40;
+            const lineHeight = 28;
+    
+            ctx2.textAlign = "left";
+    
+            // Shadow halus
+            ctx2.shadowColor = "rgba(0,0,0,0.6)";
+            ctx2.shadowBlur = 3;
+            ctx2.shadowOffsetX = 1;
+            ctx2.shadowOffsetY = 1;
+    
+            // WRAP FUNCTION
+            function getWrappedLines(ctx, text, maxWidth) {
+                const words = text.split(" ");
+                let lines = [];
+                let line = "";
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + " ";
+                    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                        lines.push(line.trim());
+                        line = words[n] + " ";
+                    } else {
+                        line = testLine;
+                    }
+                }
+                lines.push(line.trim());
+                return lines;
             }
-          }
-          lines.push(line.trim());
-          return lines;
-        }
     
-        // Hitung dimensi watermark
-        ctx2.font = "20px Arial";
-        const ketLines = keterangan ? getWrappedLines(ctx2, keterangan, canvas.width - 100) : [];
-        let totalLines = (labelStatus ? 1 : 0) + 3 + ketLines.length;
-        const totalHeight = totalLines * lineHeight;
-        let currentY = canvas.height - marginBottom;
+            const maxWidthText = canvas.width - startX - paddingRight;
+            ctx2.font = "20px Arial";
+            const ketLines = finalKeterangan ? getWrappedLines(ctx2, finalKeterangan, maxWidthText) : [];
     
-        // Background Gradient (Gelap di kiri, transparan di kanan)
-        const gradient = ctx2.createLinearGradient(0, canvas.height - totalHeight - 60, canvas.width / 1.5, canvas.height);
-        gradient.addColorStop(0, "rgba(0,0,0,0.6)");
-        gradient.addColorStop(1, "rgba(0,0,0,0)");
-        ctx2.fillStyle = gradient;
-        ctx2.fillRect(0, canvas.height - totalHeight - 60, canvas.width / 1.5, totalHeight + 80);
+            // HITUNG JUMLAH BARIS
+            let totalLines = 0;
+            if (labelStatus) totalLines += 1;
+            totalLines += 3; // JAM, TANGGAL, GPS
+            totalLines += ketLines.length;
     
-        // Garis Dekorasi Kuning di Samping Teks
-        ctx2.strokeStyle = "#FFC107";
-        ctx2.lineWidth = 5;
-        ctx2.beginPath();
-        ctx2.moveTo(startX - 15, currentY - totalHeight + 5);
-        ctx2.lineTo(startX - 15, currentY + 10);
-        ctx2.stroke();
+            const totalHeight = (totalLines - 0.3) * lineHeight;
+            let currentY = canvas.height - marginBottom;
     
-        // Gambar Teks dari Bawah ke Atas
-        ctx2.fillStyle = "#FFFFFF";
-        ctx2.shadowBlur = 2;
+            // HITUNG LEBAR TERPANJANG
+            function getMaxTextWidth(ctx, texts) {
+                let max = 0;
+                texts.forEach(t => {
+                    const w = ctx.measureText(t).width;
+                    if (w > max) max = w;
+                });
+                return max;
+            }
     
-        // 1. Baris Keterangan (jika ada)
-        if (ketLines.length > 0) {
-          for (let i = ketLines.length - 1; i >= 0; i--) {
-            ctx2.font = "italic 18px Arial";
-            ctx2.fillText(ketLines[i], startX, currentY);
+            let allLines = [];
+            if (labelStatus) { ctx2.font = "bold 24px Arial"; allLines.push(labelStatus); }
+            ctx2.font = "bold 23px Arial"; allLines.push(jamTampil);
+            ctx2.font = "22px Arial"; allLines.push(`${tanggalServer} | ${hariServer}`);
+            ctx2.font = "20px Arial"; allLines.push(gpsText);
+            if (ketLines.length > 0) allLines = allLines.concat(ketLines);
+    
+            const maxTextWidth = getMaxTextWidth(ctx2, allLines);
+            const dynamicWidth = maxTextWidth + paddingBox;
+            const finalBoxWidth = Math.min(dynamicWidth, canvas.width);
+    
+            // BACKGROUND DINAMIS
+            const padding = 15;
+            const boxTop = currentY - totalHeight - padding;
+            const boxBottom = currentY + padding;
+            const boxHeight = totalHeight + padding * 2;
+    
+            const gradient = ctx2.createLinearGradient(0, 0, finalBoxWidth, 0);
+            gradient.addColorStop(0, "rgba(0,0,0,0.35)");
+            gradient.addColorStop(1, "rgba(0,0,0,0)");
+    
+            ctx2.fillStyle = gradient;
+            ctx2.fillRect(0, boxTop, finalBoxWidth, boxHeight);
+    
+            // GARIS KUNING FIX
+            ctx2.shadowColor = "transparent";
+            ctx2.strokeStyle = "#FFC107";
+            ctx2.lineWidth = 4;
+            ctx2.lineCap = "round";
+            const halfStroke = ctx2.lineWidth / 2;
+    
+            ctx2.beginPath();
+            ctx2.moveTo(startX - 12, boxTop + halfStroke);
+            ctx2.lineTo(startX - 12, boxBottom - halfStroke);
+            ctx2.stroke();
+    
+            // GAMBAR TEKS DARI BAWAH NAIK
+            if (ketLines.length > 0) {
+                ctx2.font = "20px Arial"; ctx2.fillStyle = "#FFFFFF";
+                for (let i = ketLines.length - 1; i >= 0; i--) {
+                    ctx2.fillText(ketLines[i], startX, currentY);
+                    currentY -= lineHeight;
+                }
+            }
+    
+            ctx2.font = "20px Arial"; ctx2.fillStyle = "#F8F9FA";
+            ctx2.fillText(gpsText, startX, currentY);
             currentY -= lineHeight;
-          }
-        }
     
-        // 2. Baris Koordinat GPS
-        ctx2.font = "20px Arial";
-        ctx2.fillText(`${gpsSaatFoto[0]}, ${gpsSaatFoto[1]}`, startX, currentY);
-        currentY -= lineHeight;
+            ctx2.font = "22px Arial"; ctx2.fillStyle = "#FFFFFF";
+            ctx2.fillText(`${tanggalServer} | ${hariServer}`, startX, currentY);
+            currentY -= lineHeight;
     
-        // 3. Baris Tanggal & Hari
-        ctx2.font = "22px Arial";
-        ctx2.fillText(`${serverTime.tanggal} | ${serverTime.hari || ""}`, startX, currentY);
-        currentY -= lineHeight;
+            ctx2.font = "bold 23px Arial";
+            ctx2.fillText(jamTampil, startX, currentY);
+            currentY -= lineHeight;
     
-        // 4. Baris Waktu (Jam)
-        ctx2.font = "bold 25px Arial";
-        ctx2.fillText(serverTime.waktu + " WITA", startX, currentY);
-        currentY -= lineHeight;
+            if (labelStatus) {
+                ctx2.font = "bold 24px Arial"; ctx2.fillStyle = "#FFC107";
+                ctx2.fillText(labelStatus, startX, currentY);
+            }
     
-        // 5. Baris Status (Label Kuning)
-        if (labelStatus) {
-          ctx2.font = "bold 26px Arial";
-          ctx2.fillStyle = "#FFC107";
-          ctx2.fillText(labelStatus.toUpperCase(), startX, currentY);
-        }
+            // Reset shadow
+            ctx2.shadowColor = "transparent";
+            ctx2.shadowBlur = 0;
     
-        // --- Finalisasi ---
-        const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
-        fotoData = {
-          name: `${userData?.nama || "user"}_${serverTime.full}.jpeg`,
-          base64: finalFoto.split(",")[1],
-          type: "image/jpeg",
-          gps: gpsSaatFoto,
-          waktu: serverTime.iso
+            // FINALISASI FOTO
+            const finalFoto = canvas.toDataURL("image/jpeg", 0.90);
+            fotoData = {
+                name: `${userData?.nama || "user"}_${serverTime.full.replace(/[: ]/g, "_")}.jpeg`,
+                base64: finalFoto.split(",")[1],
+                gps: gpsSaatFoto,
+                waktu: serverTime.iso
+            };
+    
+            const fotoPreview = document.getElementById("fotoPreview");
+            fotoPreview.src = finalFoto;
+            fotoPreview.style.display = "block";
+            video.style.display = "none";
+    
+            showPopup("Foto berhasil diambil ✅", "success", 1000);
+            isSnapping = false;
         };
-    
-        // Update UI Preview
-        const fotoPreview = document.getElementById("fotoPreview");
-        if(fotoPreview) {
-          fotoPreview.src = finalFoto;
-          fotoPreview.style.display = "block";
-        }
-        if(video) video.style.display = "none";
-    
-        showPopup("Foto berhasil diambil ✅", "success", 1000);
-        isSnapping = false; 
-      };
-      
-      img.src = fotoMurni;
+        img.src = fotoMurni;
     
     } catch (err) {
-      console.error(err);
-      showPopup("❌ Gagal memproses foto/waktu!", "error");
-      isSnapping = false;
-      if (typeof resetFoto === "function") resetFoto();
+        console.error(err);
+        showPopup("❌ Gagal memproses foto/waktu!", "error");
+        isSnapping = false;
     }
 });
 
