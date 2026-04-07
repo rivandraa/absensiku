@@ -1217,6 +1217,24 @@ document.getElementById('snap').addEventListener('click', async () => {
   showPopup("Mengambil foto...", "loading");
   
 	try {
+		// ==========================================
+	    // 1) AMBIL DATA STATUS & FOTO AWAL
+	    // ==========================================
+	    const statusElement = document.getElementById("status");
+	    const statusAbsen = statusElement.value;
+	
+	    if (!statusAbsen) {
+	      showPopup("Silakan pilih status absen dulu!", "error");
+	      isSnapping = false;
+  	      return;
+  	    }
+	
+	    const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
+	    const ketElement = document.getElementById("keterangan");
+	    const keteranganUser = ketElement ? ketElement.value.trim() : "";
+	  
+	    gpsSaatFoto = [...gpsData];
+		
 	    const canvas = document.createElement("canvas");
 	    canvas.width = video.videoWidth;
 	    canvas.height = video.videoHeight;
@@ -1393,6 +1411,7 @@ document.getElementById('snap').addEventListener('click', async () => {
             fotoData = {
                 name: `${userData?.nama || "user"}_${serverTime.full.replace(/[: ]/g, "_")}.jpeg`,
                 base64: finalFoto.split(",")[1],
+				type: "image/jpeg",
                 gps: gpsSaatFoto,
                 waktu: serverTime.iso
             };
