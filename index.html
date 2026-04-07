@@ -614,12 +614,12 @@ const RADIUS_LIMIT = 30; // meter
 // =====================================================
 function startGPS(onReady) {
     gpsSystemActive = true;
-
+    refreshTargetLocation();
     // 🔥 langsung nyalakan GPS dulu
     startGPSMonitoring(onReady);
 
     // 🔥 fetch belakangan (tidak blocking)
-    refreshTargetLocation();
+   // refreshTargetLocation();
 }
 
 
