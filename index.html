@@ -970,10 +970,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 // sudah ada perintah gpsSystemActive = true
                 startGPS(); 
 
-                // 4. Paksa UI update agar teks "-" langsung muncul tanpa menunggu GPS
-                if (typeof forceUpdateDistanceUI === "function") {
-                    forceUpdateDistanceUI();
-                }
             }, 500);
         });
     }
