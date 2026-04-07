@@ -720,6 +720,13 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
+  // Guard Clause: Jika status adalah pengecualian, pastikan tetap "-" dan berhenti
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        return; 
+    }
+  
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
