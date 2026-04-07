@@ -955,6 +955,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
         statusEl.addEventListener("change", () => {
+          stopGPSMonitoring();
             refreshTargetLocation();
         });
     }
