@@ -717,30 +717,42 @@ function stopGPSLoading() {
 function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
+
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
-    // Gunakan koordinat dari parameter atau dari memory
+    // 🔥 STOP TOTAL untuk status tanpa lokasi
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        updateGPSDisplay("Mode tanpa lokasi aktif");
+        return;
+    }
+
+    // Gunakan koordinat dari parameter atau memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
 
-    if (currentLat === 0) return;
+    if (!currentLat || currentLat === 0) return;
 
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
-    
-    // Jika akurasi masih buruk (saat animasi)
+
+    // Status akurasi
     if (acc && acc > 30) {
         displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
-        displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n";
     }
 
+    // Hitung jarak hanya untuk status tertentu
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
+        const distance = getDistanceFromLatLonInMeters(
+            currentLat,
+            currentLon,
+            targetLocation.lat,
+            targetLocation.lon
+        );
+
         const insideArea = distance <= RADIUS_LIMIT;
-        
-        // Update global state secara instan
         lastInsideArea = insideArea;
 
         if (namaLokasi !== "Sedang mengambil data...") {
@@ -753,19 +765,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     }
 
     updateGPSDisplay(displayText);
-
-    // Kunci tombol kamera secara instan jika ada
-    const btnKamera = document.getElementById("btnKamera");
-    if (btnKamera) {
-        if ((status === "Hadir" || status === "WFH")) {
-            btnKamera.disabled = !lastInsideArea;
-            btnKamera.style.opacity = lastInsideArea ? "1" : "0.5";
-        } else {
-            btnKamera.disabled = false;
-            btnKamera.style.opacity = "1";
-        }
-    }
 }
+
 
 // =====================================================
 // REFRESH TARGET LOCATION
