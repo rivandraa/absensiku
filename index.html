@@ -771,11 +771,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // REFRESH TARGET LOCATION
 // =====================================================
 let isFetchingLocation = false;
-  
 async function refreshTargetLocation(callback) {
     const userRequesting = (userData && userData.username) ? userData.username : null;
-    
-    // 1. Cek User & Status Penguncian
     if (!userRequesting || isFetchingLocation) {
         if (typeof callback === "function") callback();
         return;
@@ -786,7 +783,6 @@ async function refreshTargetLocation(callback) {
     const tampil = document.getElementById("titikKoordinatTampil");
     const hidden = document.getElementById("titikKoordinat");
 
-    // 2. Validasi Jika Status Belum Dipilih
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
         targetLocation = null;
@@ -794,31 +790,16 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    // 3. LOGIKA UNTUK DINAS, IZIN, SAKIT (PERBAIKAN DI SINI)
-    const statusKhusus = ["dinas", "izin", "sakit"];
-    if (statusKhusus.includes(currentStatus.toLowerCase())) {
-        console.log("MODE KHUSUS: Tanpa Radius");
-        
-        if (tampil) tampil.value = "-";
-        if (hidden) hidden.value = "-";
-        
-        targetLocation = null;
-        lastTargetLocation = null;
-
-        // WAJIB: Paksa UI update agar tulisan "Sedang mengambil data" hilang
-        if (typeof forceUpdateDistanceUI === "function") {
-            forceUpdateDistanceUI();
-        }
-
-        if (typeof callback === "function") callback();
-        return; // Berhenti di sini, jangan lanjut ke fetch (internet)
+    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+      if (tampil) tampil.value = "-";
+      if (hidden) hidden.value = "-";
+      targetLocation = null;
+      if (typeof callback === "function") callback();
+      return;
     }
 
-    // 4. PROSES AMBIL DATA KE SERVER (Untuk Hadir/WFH)
     try {
         isFetchingLocation = true;
-        if (tampil) tampil.value = "Sedang mengambil data..."; // Tampilkan loading
-
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
@@ -832,14 +813,15 @@ async function refreshTargetLocation(callback) {
             if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
 
+            // INSTAN: Jika GPS sudah ada, langsung hitung detik ini juga
             if (gpsData[0] !== 0) forceUpdateDistanceUI();
+
         } else {
             targetLocation = null;
             if (tampil) tampil.value = "Titik tidak ditemukan";
         }
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
-        if (tampil) tampil.value = "Gagal memuat data";
     } finally {
         isFetchingLocation = false;
         if (typeof callback === "function") callback();
