@@ -191,12 +191,17 @@ body {
    TEXTAREA AUTO RESIZE
 ============================ */
 textarea.form-control {
-    resize: none;          /* Nonaktifkan resize manual */
-    overflow: hidden;      /* Hilangkan scroll bar */
+    resize: none;
+    overflow: hidden;
     transition: height 0.2s ease;
+
+    width: 100%;                 /* 🔥 penting */
+    box-sizing: border-box;      /* 🔥 WAJIB */
+    padding: 8px 10px;           /* 🔥 jangan terlalu besar */
+    line-height: 1.4;            /* 🔥 stabilin tinggi */
+
     border-radius: 5px;
     border: 1px solid #ccc;
-    padding: 10px;
 }
 
 /* ============================
