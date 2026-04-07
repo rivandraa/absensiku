@@ -1169,7 +1169,7 @@ document.getElementById('snap').addEventListener('click', async () => {
   }
 
   // 2. VALIDASI GPS & RADIUS
-  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+  if (gpsData[0] === 0 || animatingGPS) {
     showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
     vibrateAlertShort();
     isSnapping = false;
