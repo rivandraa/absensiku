@@ -989,6 +989,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 statusEl.addEventListener("change", () => {
     targetLocation = null; // reset langsung
+    lastTargetLocation = null;
     refreshTargetLocation();
 });
 
