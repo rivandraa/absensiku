@@ -790,13 +790,17 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-      if (tampil) tampil.value = "-";
-      if (hidden) hidden.value = "-";
-      targetLocation = null;
-      if (typeof callback === "function") callback();
-      return;
-    }
+if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+    if (tampil) tampil.value = "-";
+    if (hidden) hidden.value = "-";
+    targetLocation = null;
+    
+    // TAMBAHKAN INI agar UI langsung berubah detik itu juga tanpa tunggu interval GPS
+    if (typeof forceUpdateDistanceUI === "function") forceUpdateDistanceUI(); 
+    
+    if (typeof callback === "function") callback();
+    return;
+}
 
     try {
         isFetchingLocation = true;
