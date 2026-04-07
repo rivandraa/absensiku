@@ -794,7 +794,7 @@ async function refreshTargetLocation(callback) {
       if (tampil) tampil.value = "-";
       if (hidden) hidden.value = "-";
       targetLocation = null;
-     // if (typeof callback === "function") callback();
+      if (typeof callback === "function") callback();
       return;
     }
 
@@ -954,12 +954,15 @@ function startGPSMonitoring() {
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
-        statusEl.addEventListener("change", async () => {
-            await refreshTargetLocation(); 
-            forceUpdateDistanceUI();       
-        }); // <-- Anda mungkin lupa penutup ini
-    } // <-- Dan penutup blok IF ini
-}); // <-- Dan penutup DOMContentLoaded ini
+        statusEl.addEventListener("change", () => {
+            // Kita panggil refreshTargetLocation
+            // Dan kita masukkan forceUpdateDistanceUI ke dalam callback-nya
+            refreshTargetLocation(() => {
+                forceUpdateDistanceUI();
+            });
+        });
+    }
+});
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
