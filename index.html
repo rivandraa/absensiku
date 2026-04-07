@@ -695,37 +695,51 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
+
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
 
-    if (currentLat === 0) return;
+    if (!currentLat || currentLat === 0) return;
 
-    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
-    
-    // Jika akurasi masih buruk (saat animasi)
+    let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
+
+    // ===============================
+    // AKURASI
+    // ===============================
     if (acc && acc > 30) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
-                       "Sedang meningkatkan akurasi" + ".".repeat(accDots);
+        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > 30 Meter\n` +
+                       `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
     } else {
         displayText += "Tingkat Akurasi : Terkunci (Bagus)\n";
     }
 
-    if ((status === "Hadir" || status === "WFH") && targetLocation) {
-        const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
-        const insideArea = distance <= RADIUS_LIMIT;
-        
-        // Update global state secara instan
-        lastInsideArea = insideArea;
+    // ===============================
+    // JARAK
+    // ===============================
+    if ((status === "Hadir" || status === "WFH")) {
 
-        if (namaLokasi !== "Sedang mengambil data...") {
+        // 🔥 Kalau lokasi belum siap
+        if (!lokasiLoaded || !targetLocation) {
+            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
+        } else {
+            const distance = getDistanceFromLatLonInMeters(
+                currentLat,
+                currentLon,
+                targetLocation.lat,
+                targetLocation.lon
+            );
+
+            const insideArea = distance <= RADIUS_LIMIT;
+
+            // Update global state
+            lastInsideArea = insideArea;
+
             displayText += insideArea
                 ? `\n✅ Berada dalam area/radius ${namaLokasi}`
                 : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
-        } else {
-            displayText += "\nℹ️ Sedang menghitung jarak Anda...";
         }
     }
 
@@ -938,7 +952,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Panggil startGPS() saja, karena di dalam startGPS 
                 // sudah ada perintah gpsSystemActive = true
                 startGPS(); 
-            }, 500);
+            }, 200);
         });
     }
 
