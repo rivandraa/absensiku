@@ -972,6 +972,7 @@ document.addEventListener("DOMContentLoaded", () => {
 if (statusEl) {
     statusEl.addEventListener("change", async () => { 
         // 2. Tunggu refresh sampai beres (termasuk status Dinas/Izin/Sakit)
+      resetGPSState();
         await refreshTargetLocation();
     });
 }
