@@ -951,7 +951,25 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
-// ====== EVENT LISTENER STATUS (VERSI SEMPURNA) ======
+document.addEventListener("DOMContentLoaded", () => {
+    const statusEl = document.getElementById("status");
+    if (statusEl) {
+        statusEl.addEventListener("change", () => {
+            gpsSystemActive = false;
+            stopGPSMonitoring(); 
+
+            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            refreshTargetLocation();
+            setTimeout(() => {
+                // Panggil startGPS() saja, karena di dalam startGPS 
+                // sudah ada perintah gpsSystemActive = true
+                startGPS(); 
+
+            }, 500);
+        });
+    }
+
+  
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     
@@ -966,6 +984,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
             setTimeout(() => {
+                gpsSystemActive = true;
                 // Panggil startGPS() saja, karena di dalam startGPS 
                 // sudah ada perintah gpsSystemActive = true
                 startGPS(); 
@@ -973,23 +992,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 500);
         });
     }
-});
-
-    document.getElementById("restartGPS")?.addEventListener("click", () => {
-        gpsSystemActive = false;
-        stopGPSMonitoring();
-        const btn = document.getElementById("restartGPS");
-        btn.innerHTML = "⏳ Mengatur Ulang...";
-        btn.disabled = true;
-
-        setTimeout(() => {
-            gpsSystemActive = true;
-            btn.innerHTML = "🔄 Restart GPS";
-            btn.disabled = false;
-            startGPS();
-            if (typeof showPopup === "function") showPopup("GPS Direstart", "success", 3000);
-        }, 500);
-    });
 });
 
 /* =========================================================================================================
