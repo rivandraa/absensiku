@@ -633,12 +633,13 @@ const RADIUS_LIMIT = 30; // meter
 function startGPS(onReady) {
     gpsSystemActive = true;
 
-    refreshTargetLocation(() => {
-        if (!gpsSystemActive) return;
+    // 🔥 langsung nyalakan GPS dulu
+    startGPSMonitoring(onReady);
 
-        startGPSMonitoring(onReady); // 🔥 teruskan callback
-    });
+    // 🔥 fetch belakangan (tidak blocking)
+    refreshTargetLocation();
 }
+
 
 function stopGPSMonitoring() {
     gpsSystemActive = false;
@@ -900,7 +901,7 @@ function startGPSMonitoring(onReady) {
             gpsErrorActive = false;
             forceClosePopup();
             startGPSLoading();
-            setTimeout(() => startWatch(), 1000);
+            startWatch();
         }
     }
 
@@ -951,8 +952,8 @@ function startGPSMonitoring(onReady) {
         );
     }
 
-//    handleGPS();
-//}
+    handleGPS();
+}
 
 
     function startAccAnim(lat, lon, acc) {
@@ -977,7 +978,7 @@ function startGPSMonitoring(onReady) {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
             refreshTargetLocation();
-        }, 5000);
+        }, 3000);
     }
 }
 
@@ -1011,7 +1012,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gpsSystemActive = false;
         stopGPSMonitoring();
 
-        restartBtn.innerHTML = "⏳ Mengatur Ulang...";
+        restartBtn.innerHTML = "⏳ Sedang Restart...";
         restartBtn.disabled = true;
 
         startGPS(() => {
@@ -1019,7 +1020,7 @@ document.addEventListener("DOMContentLoaded", () => {
             restartBtn.disabled = false;
 
             if (typeof showPopup === "function") {
-                showPopup("GPS akan segera di restart, silakan tunggu.", "success", 5000);
+                showPopup("GPS berhasil di-restart.", "success", 3000);
             	}
         	});
     	});
