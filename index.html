@@ -803,7 +803,7 @@ async function refreshTargetLocation(callback) {
     try {
         isFetchingLocation = true;
 
-        if (tampil) tampil.value = "Sedang mengambil data...";
+       // if (tampil) tampil.value = "Sedang mengambil data...";
 
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
