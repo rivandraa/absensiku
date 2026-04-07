@@ -748,6 +748,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
+let isFetchingLocation = false;
 async function refreshTargetLocation(callback) {
 
     const statusInput = document.getElementById("status");
@@ -790,10 +791,10 @@ async function refreshTargetLocation(callback) {
     // ✅ CEK USER & LOCK (SETELAH VALIDASI)
     // ===============================
     const userRequesting = (userData && userData.username) ? userData.username : null;
-    if (!userRequesting || isFetchingLocation) {
-        if (typeof callback === "function") callback();
-        return;
-    }
+        if (!userRequesting) {
+            if (typeof callback === "function") callback();
+            return;
+        }
 
     // ===============================
     // 🔥 BARU BUAT REQUEST ID DI SINI
