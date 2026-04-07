@@ -769,6 +769,7 @@ async function refreshTargetLocation(callback) {
     }
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
+        fetchRequestId++;
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
         targetLocation = null;
@@ -776,13 +777,13 @@ async function refreshTargetLocation(callback) {
         if (typeof callback === "function") callback();
         return; 
     }
-
+const currentRequestId = ++fetchRequestId;
     try {
         isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
-
+if (currentRequestId !== fetchRequestId) return;
         if (loc && loc.lat && loc.lon) {
             const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
             targetLocation = newLocation;
