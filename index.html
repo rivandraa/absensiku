@@ -721,12 +721,6 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
-    // 🔥 STOP TOTAL untuk status tanpa lokasi
-    if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        updateGPSDisplay("Mode tanpa lokasi aktif");
-        return;
-    }
-
     // Gunakan koordinat dari parameter atau memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
@@ -802,10 +796,6 @@ async function refreshTargetLocation(callback) {
     
         // 🔥 penting: hentikan fetch yang sedang berjalan
         isFetchingLocation = false;
-    
-        if (typeof callback === "function") callback();
-        return;
-    }
     
         if (typeof callback === "function") callback();
         return;
