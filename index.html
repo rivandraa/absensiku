@@ -955,9 +955,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     if (statusEl) {
         statusEl.addEventListener("change", async () => {
-            await refreshTargetLocation(); // Tunggu sampai fungsi di atas selesai memproses tanda "-"
-            forceUpdateDistanceUI();       // Pastikan layar digambar ulang
-        });
+            await refreshTargetLocation(); 
+            forceUpdateDistanceUI();       
+        }); // <-- Anda mungkin lupa penutup ini
+    } // <-- Dan penutup blok IF ini
+}); // <-- Dan penutup DOMContentLoaded ini
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
