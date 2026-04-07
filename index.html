@@ -605,6 +605,7 @@ let lastGPSEnabled = null;
 let lastTargetLocation = null;
 let areaErrorActive = false;
 let lastInsideArea = null;
+let fetchRequestId = 0;
 
 let targetLocation = null;
 let gpsSystemActive = false;
@@ -747,9 +748,9 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
-let isFetchingLocation = false;
-  
 async function refreshTargetLocation(callback) {
+    const currentRequestId = ++fetchRequestId; // 🔥 tandai request ini
+
     const userRequesting = (userData && userData.username) ? userData.username : null;
     if (!userRequesting || isFetchingLocation) {
         if (typeof callback === "function") callback();
@@ -761,31 +762,43 @@ async function refreshTargetLocation(callback) {
     const tampil = document.getElementById("titikKoordinatTampil");
     const hidden = document.getElementById("titikKoordinat");
 
+    // ===============================
+    // STATUS KOSONG
+    // ===============================
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
         targetLocation = null;
         if (typeof callback === "function") callback();
         return;
     }
-    
+
+    // ===============================
+    // DINAS / IZIN / SAKIT
+    // ===============================
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-        // RESET TOTAL SEMUA VARIABEL KOORDINAT
-        
+
+        // 🔥 invalidate semua request lama
+        fetchRequestId++;
+
+        targetLocation = null;
+        lastTargetLocation = null;
+
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-    
-        // Panggil update UI untuk mengunci tampilan detik ini juga
-        //forceUpdateDistanceUI();
-        
+
         if (typeof callback === "function") callback();
-        return; 
+        return;
     }
 
     try {
         isFetchingLocation = true;
+
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
+
+        // 🔥 CEK: kalau ini bukan request terbaru → abaikan
+        if (currentRequestId !== fetchRequestId) return;
 
         if (loc && loc.lat && loc.lon) {
             const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
@@ -793,16 +806,17 @@ async function refreshTargetLocation(callback) {
             lastTargetLocation = newLocation;
 
             const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
+
             if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
 
-            // INSTAN: Jika GPS sudah ada, langsung hitung detik ini juga
             if (gpsData[0] !== 0) forceUpdateDistanceUI();
 
         } else {
             targetLocation = null;
             if (tampil) tampil.value = "Titik tidak ditemukan";
         }
+
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
@@ -810,7 +824,7 @@ async function refreshTargetLocation(callback) {
         if (typeof callback === "function") callback();
     }
 }
-  
+
 // =====================================================
 // CALCULATION LOGIC
 // =====================================================
