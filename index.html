@@ -951,15 +951,32 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
+// ====== EVENT LISTENER STATUS (VERSI SEMPURNA) ======
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
+    
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-          stopGPSMonitoring();
-            refreshTargetLocation();
-          startGPS();
+            console.log("Status berubah, memperbarui sistem...");
+            
+            // 1. Hentikan pemantauan GPS lama agar tidak bentrok
+            stopGPSMonitoring(); 
+            
+            // 2. Refresh lokasi target dengan CALLBACK
+            // Ini memastikan startGPS() HANYA jalan setelah data lokasi (atau tanda "-") siap
+            refreshTargetLocation(() => {
+                
+                // 3. Jalankan kembali GPS dengan data target yang baru
+                startGPS(); 
+                
+                // 4. Paksa UI update untuk memastikan tanda "-" langsung muncul
+                if (typeof forceUpdateDistanceUI === "function") {
+                    forceUpdateDistanceUI();
+                }
+            });
         });
     }
+});
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
