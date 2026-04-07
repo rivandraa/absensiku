@@ -769,21 +769,20 @@ async function refreshTargetLocation(callback) {
     }
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-        // 1. Bersihkan variabel targetLocation TERLEBIH DAHULU
-        targetLocation = null; 
+        // RESET TOTAL SEMUA VARIABEL KOORDINAT
+        targetLocation = null;
+        lastTargetLocation = null; // Tambahkan ini agar memori lama terhapus
         
-        // 2. Update tampilan UI secara paksa
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-        
-        // 3. Panggil update UI Jarak agar dia tahu target sudah null
-        if (typeof forceUpdateDistanceUI === "function") {
-            forceUpdateDistanceUI(); 
-        }
+    
+        // Panggil update UI untuk mengunci tampilan detik ini juga
+        forceUpdateDistanceUI();
         
         if (typeof callback === "function") callback();
-        return; // Keluar dari fungsi agar tidak lanjut ke fetch
+        return; 
     }
+
     try {
         isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
@@ -957,7 +956,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 gpsSystemActive = true;
                 // Panggil startGPS() saja, karena di dalam startGPS 
                 // sudah ada perintah gpsSystemActive = true
-                startGPS(); 
+                startGPSMonitoring(); 
             }, 200);
         });
     }
