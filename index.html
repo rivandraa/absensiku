@@ -986,11 +986,14 @@ document.addEventListener("DOMContentLoaded", () => {
           //  }, 200);
         });
     }
+
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             refreshTargetLocation();
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
         });
     }
+    
     // === restart gps ===
     if (restartBtn) {
         restartBtn.addEventListener("click", () => {
