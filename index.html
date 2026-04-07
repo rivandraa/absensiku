@@ -962,47 +962,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     const restartBtn = document.getElementById("restartGPS");
 
-    // --- Logic untuk Perubahan Status ---
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-            // 1. Matikan sistem (Gunakan window. jika variabel bersifat global)
-            if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = false;
-            
-            // Pastikan fungsi stop ada sebelum dipanggil
-            if (typeof stopGPSMonitoring === "function") stopGPSMonitoring(); 
+            // 1. Matikan sistem yang berjalan saat ini
+            gpsSystemActive = false;
+            stopGPSMonitoring(); 
 
-            // 2. Refresh data target
-            if (typeof refreshTargetLocation === "function") refreshTargetLocation();
+            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            refreshTargetLocation();
 
-            // 3. Jeda 500ms
+            // 3. Beri jeda 500ms sebelum menghidupkan kembali
             setTimeout(() => {
-                if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = true;
-                
-                // Cukup panggil startGPS jika fungsinya tersedia
-                if (typeof startGPS === "function") {
-                    startGPS();
-                }
+                gpsSystemActive = true;
+                // Panggil startGPS() saja, karena di dalam startGPS 
+                // sudah ada perintah gpsSystemActive = true
+                startGPS(); 
             }, 500);
         });
     }
 
-    // --- Logic untuk Restart GPS ---
+    // === restart gps ===
     if (restartBtn) {
         restartBtn.addEventListener("click", () => {
-            if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = false;
-            if (typeof stopGPSMonitoring === "function") stopGPSMonitoring();
-
-            const originalText = restartBtn.innerHTML;
+            gpsSystemActive = false;
+            stopGPSMonitoring();
+            
             restartBtn.innerHTML = "⏳ Mengatur Ulang...";
             restartBtn.disabled = true;
 
             setTimeout(() => {
-                if (typeof gpsSystemActive !== 'undefined') gpsSystemActive = true;
-                
-                restartBtn.innerHTML = originalText; // Mengembalikan ke teks asli
+                gpsSystemActive = true;
+                restartBtn.innerHTML = "🔄 Restart GPS";
                 restartBtn.disabled = false;
-
-                if (typeof startGPSMonitoring === "function") startGPSMonitoring();
+                startGPSMonitoring();
                 
                 if (typeof showPopup === "function") {
                     showPopup("GPS Direstart", "success", 3000);
