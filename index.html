@@ -1217,24 +1217,6 @@ document.getElementById('snap').addEventListener('click', async () => {
   showPopup("Mengambil foto...", "loading");
   
 	try {
-		// ==========================================
-	    // 1) AMBIL DATA STATUS & FOTO AWAL
-	    // ==========================================
-	    const statusElement = document.getElementById("status");
-	    const statusAbsen = statusElement.value;
-	
-	    if (!statusAbsen) {
-	      showPopup("Silakan pilih status absen dulu!", "error");
-	      isSnapping = false;
-  	      return;
-  	    }
-	
-	    const labelStatus = (statusAbsen === "Hadir" || statusAbsen === "Dinas" || statusAbsen === "WFH") ? statusAbsen.toUpperCase() : "";
-	    const ketElement = document.getElementById("keterangan");
-	    const keteranganUser = ketElement ? ketElement.value.trim() : "";
-	  
-	    gpsSaatFoto = [...gpsData];
-		
 	    const canvas = document.createElement("canvas");
 	    canvas.width = video.videoWidth;
 	    canvas.height = video.videoHeight;
@@ -1269,7 +1251,7 @@ document.getElementById('snap').addEventListener('click', async () => {
 	
 	    // Persiapan Variabel untuk Watermark
 	    const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
-	    const finalKeterangan = "";
+	    const finalKeterangan = keteranganUser ? keteranganUser : "-";
 	    const jamTampil = serverTime.waktu + " WITA";
 	    const tanggalServer = serverTime.tanggal;
 	    const hariServer = serverTime.hari;
