@@ -965,7 +965,7 @@ function startGPSMonitoring() {
 // ====== EVENT LISTENER STATUS ======
 statusEl.addEventListener("change", async () => {
     // Tambahkan 'await' agar kode menunggu sampai tanda "-" selesai diatur
-    await refreshTargetLocation(); 
+    refreshTargetLocation(); 
     
     // Panggil update UI tanpa syarat if (gpsData[0] !== 0) 
     // agar tampilan tetap segar meskipun GPS belum aktif
