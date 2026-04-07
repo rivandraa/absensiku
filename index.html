@@ -697,6 +697,17 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Sedang mengambil data...";
 
+// PROTEKSI KEDIPAN: Jika status bukan Hadir/WFH, langsung set tampilan ke "-"
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        const elNama = document.getElementById("titikKoordinatTampil");
+        const elHidden = document.getElementById("titikKoordinat");
+        if (elNama) elNama.value = "-";
+        if (elHidden) elHidden.value = "-";
+        updateGPSDisplay("Status: " + status + "\nTidak memerlukan koordinat absensi.");
+        
+        return; // BERHENTI DI SINI, jangan lanjut ke logika hitung jarak
+    }
+    
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
