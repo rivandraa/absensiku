@@ -790,14 +790,22 @@ async function refreshTargetLocation(callback) {
         return;
     }
     
-    if (currentStatus === "Dinas") {
+    if (currentStatus && currentStatus.trim().toLowerCase() === "dinas") {
+        console.log("MODE DINAS AKTIF");
+    
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
+    
         targetLocation = null;
         lastTargetLocation = null;
+    
+        // opsional: reset gps jarak
+        // gpsData = [0, 0];
+    
         forceUpdateDistanceUI();
+    
         if (typeof callback === "function") callback();
-        return; 
+        return;
     }
 
     try {
