@@ -717,13 +717,21 @@ function stopGPSLoading() {
 function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
+    
+    // 1. Cek status pengecualian di awal
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        const elNama = document.getElementById("titikKoordinatTampil");
+        const hidden = document.getElementById("titikKoordinat");
+        
+        // Pastikan UI tetap menampilkan "-" meskipun fungsi ini terpanggil
+        if (elNama) elNama.value = "-";
+        if (hidden) hidden.value = "-";
+        
+        return; // Berhenti di sini, jangan lanjut hitung jarak
+    }
+
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
-  
-// Jika status adalah pengecualian, jangan update UI jarak/koordinat
-    if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        return; 
-    }
   
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
