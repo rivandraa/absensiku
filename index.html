@@ -717,17 +717,14 @@ function stopGPSLoading() {
 function forceUpdateDistanceUI(lat, lon, acc) {
     const statusInput = document.getElementById("status");
     const status = statusInput ? statusInput.value : "";
-    
-    // 1. Cek status pengecualian di awal
+    const tampil = document.getElementById("titikKoordinatTampil");
+    const hidden = document.getElementById("titikKoordinat");
+
+    // Guard Clause: Jika status adalah pengecualian, pastikan tetap "-" dan berhenti
     if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        const elNama = document.getElementById("titikKoordinatTampil");
-        const hidden = document.getElementById("titikKoordinat");
-        
-        // Pastikan UI tetap menampilkan "-" meskipun fungsi ini terpanggil
-        if (elNama) elNama.value = "-";
+        if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-        
-        return; // Berhenti di sini, jangan lanjut hitung jarak
+        return; 
     }
 
     const elNama = document.getElementById("titikKoordinatTampil");
