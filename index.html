@@ -748,7 +748,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
-//let isFetchingLocation = false;
+let isFetchingLocation = false;
 async function refreshTargetLocation(callback) {
 
     const statusInput = document.getElementById("status");
@@ -802,7 +802,7 @@ async function refreshTargetLocation(callback) {
     const currentRequestId = ++fetchRequestId;
 
     try {
-        //isFetchingLocation = true;
+        isFetchingLocation = true;
 
        // if (tampil) tampil.value = "Sedang mengambil data...";
 
@@ -833,12 +833,11 @@ async function refreshTargetLocation(callback) {
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
-        //isFetchingLocation = false;
+        isFetchingLocation = false;
         if (typeof callback === "function") callback();
     }
 }
-
-
+    
 // =====================================================
 // CALCULATION LOGIC
 // =====================================================
@@ -971,28 +970,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             // 1. Matikan sistem yang berjalan saat ini
-           // gpsSystemActive = false;
-          //  stopGPSMonitoring(); 
+            gpsSystemActive = false;
+            stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-           // refreshTargetLocation();
+            refreshTargetLocation();
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
-          //  setTimeout(() => {
-           //     gpsSystemActive = true;
+            setTimeout(() => {
+                gpsSystemActive = true;
                 // Panggil startGPS() saja, karena di dalam startGPS 
                 // sudah ada perintah gpsSystemActive = true
-            //    startGPSMonitoring(); 
-          //  }, 200);
+                startGPSMonitoring(); 
+            }, 200);
         });
     }
-
-statusEl.addEventListener("change", () => {
-    targetLocation = null; // reset langsung
-    lastTargetLocation = null;
-    refreshTargetLocation();
-});
-
     
     // === restart gps ===
     if (restartBtn) {
