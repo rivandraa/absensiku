@@ -491,31 +491,36 @@ async function loginUser() {
 
     const passwordHash = await hashPassword(password);
 
-    // Pengganti google.script.run
+async function loginUser() {
+    hideAlerts(); 
+
+    const username = $('#username').val().trim();
+    const password = $('#password').val().trim();
+
+    if (!username || !password) {
+        showPopup("Username dan Password harus diisi!", "error");
+        return;
+    }
+
+    showPopup("Memproses login...", "loading");
+
     try {
-        //const response = await fetch(GAS_URL, {
-            //method: "POST", // Menggunakan POST agar aman mengirim hash
-            //mode: "no-cors", // Penting untuk menghindari blokir CORS di GAS
-            //body: JSON.stringify({
-                //action: "checkLogin",
-                //username: username,
-                //passwordHash: passwordHash
-            //})
-        //});
+        // 1. Hashing password dilakukan secara lokal (cepat)
+        const passwordHash = await hashPassword(password);
 
-        /* CATATAN: Karena GAS menggunakan redirect, fetch dengan mode 'no-cors' 
-           tidak bisa membaca body response secara langsung. 
-           Solusi terbaik: Gunakan 'cors' (default) tapi pastikan GAS mengembalikan JSON yang benar.
-        */
-
-        // VERSI LEBIH STABIL UNTUK GITHUB PAGES:
-        const webResponse = await fetch(`${GAS_URL}?action=checkLogin&username=${username}&passwordHash=${passwordHash}`);
+        // 2. SATU KALI FETCH SAJA (Gunakan template literals agar rapi)
+        // Gunakan parameter timestamp (&_t=) untuk menghindari cache browser
+        const url = `${GAS_URL}?action=checkLogin&username=${encodeURIComponent(username)}&passwordHash=${encodeURIComponent(passwordHash)}&_t=${Date.now()}`;
+        
+        const webResponse = await fetch(url);
+        
+        if (!webResponse.ok) throw new Error("Network response was not ok");
+        
         const res = await webResponse.json();
 
         if (res && res.status !== "error") {
-            // ✅ Login berhasil
+            // ✅ LOGIN BERHASIL (Sisa kode Anda)
             userData = res;
-
             sessionStorage.setItem('userData', JSON.stringify(res));
             sessionStorage.setItem('page', 'absen');
 
@@ -529,31 +534,26 @@ async function loginUser() {
 
             if (res.koordinat) {
                 const parts = res.koordinat.split(",");
-                targetLocation = {
-                    lat: parseFloat(parts[0]),
-                    lon: parseFloat(parts[1])
-                };
+                targetLocation = { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
                 lastTargetLocation = targetLocation;
-            } else {
-                targetLocation = null;
-                lastTargetLocation = null;
             }
             
-            showPopup("Login berhasil! Selamat datang " + res.nama, "success");
+            showPopup("Login berhasil!", "success");
 
-            startIdleTimer();
-            startGPS();
-            startWebcam();
+            setTimeout(() => {
+                startIdleTimer();
+                startGPS();
+                startWebcam();
+            }, 500);
             
         } else {
-            // Username/password salah atau error dari server
             const errMsg = res.message || "Username atau Password salah!";
             $('#alertLogin').html("⚠️ " + errMsg).show();
             showPopup(errMsg, "error");
         }
     } catch (error) {
         console.error("Connection Error:", error);
-        showPopup("⚠️ Gagal terhubung ke server. Pastikan koneksi internet stabil.", "error", 5000);
+        showPopup("⚠️ Gagal terhubung ke server.", "error", 5000);
     }
 }
 
