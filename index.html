@@ -951,9 +951,14 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
-    document.getElementById("status").addEventListener("change", () => {
-        refreshTargetLocation();
-    });
+document.addEventListener("DOMContentLoaded", () => {
+    const statusEl = document.getElementById("status");
+    if (statusEl) {
+        statusEl.addEventListener("change", () => {
+            refreshTargetLocation();
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+        });
+    }
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
         gpsSystemActive = false;
