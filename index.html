@@ -655,6 +655,7 @@ function resetGPSState() {
     lastGPSEnabled = null;
     targetLocation = null;
     lastTargetLocation = null;
+    isFetchingLocation = false;
 
     //updateGPSDisplay("Silakan tunggu...");
 }
@@ -747,10 +748,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
-// =====================================================
-// REFRESH TARGET LOCATION
-// =====================================================
-
+let isFetchingLocation = false;
 async function refreshTargetLocation(callback) {
     const userRequesting = (userData && userData.username) ? userData.username : null;
     if (!userRequesting) {
@@ -771,14 +769,16 @@ async function refreshTargetLocation(callback) {
     }
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-      if (tampil) tampil.value = "-";
-      if (hidden) hidden.value = "-";
-      targetLocation = null;
-      if (typeof callback === "function") callback();
-      return;
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        targetLocation = null;
+        lastTargetLocation = null;
+        if (typeof callback === "function") callback();
+        return; 
     }
 
     try {
+        isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
         const response = await fetch(url);
         const loc = await response.json();
@@ -802,6 +802,7 @@ async function refreshTargetLocation(callback) {
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
+        isFetchingLocation = false;
         if (typeof callback === "function") callback();
     }
 }
