@@ -963,31 +963,11 @@ function startGPSMonitoring() {
 // ====== EVENT LISTENER STATUS ======
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
-    if (!statusEl) return;
-
-    statusEl.addEventListener("change", () => {
-        const status = statusEl.value;
-
-        // aman panggil
-        if (typeof refreshTargetLocation === "function") {
+    if (statusEl) {
+        statusEl.addEventListener("change", () => {
             refreshTargetLocation();
-        }
-
-        // 🔥 proteksi total
-        if (!["Dinas", "Izin", "Sakit"].includes(status)) {
-
-            if (typeof gpsData !== "undefined" &&
-                Array.isArray(gpsData) &&
-                gpsData.length >= 2 &&
-                gpsData[0] !== 0) {
-
-                if (typeof forceUpdateDistanceUI === "function") {
-                    forceUpdateDistanceUI();
-                }
-            }
-        }
-    });
-});
+        });
+    }
 
 
     document.getElementById("restartGPS")?.addEventListener("click", () => {
