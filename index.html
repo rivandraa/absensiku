@@ -719,7 +719,12 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const status = statusInput ? statusInput.value : "";
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
-
+  
+// Jika status adalah pengecualian, jangan update UI jarak/koordinat
+    if (["Dinas", "Izin", "Sakit"].includes(status)) {
+        return; 
+    }
+  
     // Gunakan koordinat dari parameter atau dari memory
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
@@ -951,24 +956,12 @@ function startGPSMonitoring() {
 }
 
     // ====== EVENT LISTENER STATUS ======
-document.addEventListener("DOMContentLoaded", () => {
-    const statusEl = document.getElementById("status");
-    if (statusEl) {
-        statusEl.addEventListener("change", () => {
-            gpsSystemActive = false;
-            stopGPSMonitoring(); 
-
-            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation();
-            setTimeout(() => {
-                // Panggil startGPS() saja, karena di dalam startGPS 
-                // sudah ada perintah gpsSystemActive = true
-                startGPS(); 
-
-            }, 500);
-        });
+statusEl.addEventListener("change", async () => { // Tambahkan async di sini
+    await refreshTargetLocation(); // Tambahkan await di sini
+    if (gpsData[0] !== 0) {
+        forceUpdateDistanceUI();
     }
-
+});
   
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
