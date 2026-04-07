@@ -974,7 +974,7 @@ document.addEventListener("DOMContentLoaded", () => {
           //  stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation();
+           // refreshTargetLocation();
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
           //  setTimeout(() => {
@@ -985,7 +985,12 @@ document.addEventListener("DOMContentLoaded", () => {
           //  }, 200);
         });
     }
-
+    if (statusEl) {
+        statusEl.addEventListener("change", () => {
+            refreshTargetLocation();
+            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+        });
+    }
     // === restart gps ===
     if (restartBtn) {
         restartBtn.addEventListener("click", () => {
