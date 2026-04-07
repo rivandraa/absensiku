@@ -2186,9 +2186,9 @@ $(document).ready(function() {
     Fungsi lainnya
 ===================================================== */
 // Fungsi autoresize
-function autoResize(el) { 
-    el.style.height = 'auto'; 
-    el.style.height = el.scrollHeight + 'px'; 
+function autoResize(el) {
+    el.style.height = "0px";
+    el.style.height = (el.scrollHeight + 2) + "px"; // +2 biar aman
 }
 
 function autoFitText(selector, maxSize = 22, minSize = 10) {
