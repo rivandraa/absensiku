@@ -970,19 +970,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             // 1. Matikan sistem yang berjalan saat ini
-            gpsSystemActive = false;
-            stopGPSMonitoring(); 
+           // gpsSystemActive = false;
+          //  stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
             refreshTargetLocation();
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
-            setTimeout(() => {
-                gpsSystemActive = true;
+          //  setTimeout(() => {
+           //     gpsSystemActive = true;
                 // Panggil startGPS() saja, karena di dalam startGPS 
                 // sudah ada perintah gpsSystemActive = true
-                startGPSMonitoring(); 
-            }, 200);
+            //    startGPSMonitoring(); 
+          //  }, 200);
         });
     }
 
