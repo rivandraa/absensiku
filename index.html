@@ -957,23 +957,24 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-            console.log("Status berubah, memperbarui sistem...");
-            
-            // 1. Hentikan pemantauan GPS lama agar tidak bentrok
+            // 1. Matikan sistem yang berjalan saat ini
+            gpsSystemActive = false;
             stopGPSMonitoring(); 
-            
-            // 2. Refresh lokasi target dengan CALLBACK
-            // Ini memastikan startGPS() HANYA jalan setelah data lokasi (atau tanda "-") siap
-            refreshTargetLocation(() => {
-                
-                // 3. Jalankan kembali GPS dengan data target yang baru
+
+            // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            refreshTargetLocation();
+
+            // 3. Beri jeda 500ms sebelum menghidupkan kembali
+            setTimeout(() => {
+                // Panggil startGPS() saja, karena di dalam startGPS 
+                // sudah ada perintah gpsSystemActive = true
                 startGPS(); 
-                
-                // 4. Paksa UI update untuk memastikan tanda "-" langsung muncul
+
+                // 4. Paksa UI update agar teks "-" langsung muncul tanpa menunggu GPS
                 if (typeof forceUpdateDistanceUI === "function") {
                     forceUpdateDistanceUI();
                 }
-            });
+            }, 500);
         });
     }
 });
