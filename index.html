@@ -748,7 +748,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 // REFRESH TARGET LOCATION
 // =====================================================
-let isFetchingLocation = false;
+//let isFetchingLocation = false;
 async function refreshTargetLocation(callback) {
 
     const statusInput = document.getElementById("status");
@@ -802,7 +802,7 @@ async function refreshTargetLocation(callback) {
     const currentRequestId = ++fetchRequestId;
 
     try {
-        isFetchingLocation = true;
+        //isFetchingLocation = true;
 
        // if (tampil) tampil.value = "Sedang mengambil data...";
 
@@ -833,7 +833,7 @@ async function refreshTargetLocation(callback) {
     } catch (error) {
         console.error("Gagal mengambil lokasi:", error);
     } finally {
-        isFetchingLocation = false;
+        //isFetchingLocation = false;
         if (typeof callback === "function") callback();
     }
 }
@@ -989,7 +989,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             refreshTargetLocation();
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
         });
     }
     // === restart gps ===
