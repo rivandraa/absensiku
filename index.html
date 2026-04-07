@@ -602,9 +602,6 @@ async function isGPSEnabledUniversal() {
 // =====================================================
 // GPS STATE
 // =====================================================
-// =====================================================
-// GPS STATE
-// =====================================================
 let gpsWatcherId = null;
 let gpsMonitorInterval = null;
 let gpsLoadingInterval = null;
@@ -1219,30 +1216,50 @@ document.getElementById('snap').addEventListener('click', async () => {
   // 3. PROSES PENGAMBILAN GAMBAR
   showPopup("Mengambil foto...", "loading");
   
-    try {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        
-        // 1. Ambil gambar murni dari video
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-    
-        // 2. Sinkronisasi Waktu Server (Tetap pakai fetch sesuai kode Anda)
-        const response = await fetch(`${GAS_URL}?action=getServerTime`);
-        const serverTime = await response.json();
-    
-        // Persiapan Variabel untuk Watermark
-        const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
-        const finalKeterangan = ""; // Kosongkan jika tidak ada input keterangan
-        const jamTampil = serverTime.waktu + " WITA";
-        const tanggalServer = serverTime.tanggal;
-        const hariServer = serverTime.hari;
-        const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
-        const gpsSaatFoto = [...gpsData];
-    
-        const img = new Image();
+	try {
+	    const canvas = document.createElement("canvas");
+	    canvas.width = video.videoWidth;
+	    canvas.height = video.videoHeight;
+	    const ctx = canvas.getContext("2d");
+	    
+	    // 1. Ambil gambar murni dari video
+	    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+	    const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
+	
+	    // =====================================================
+	    // 🔥 TAMBAHAN: SIMPAN & TAMPILKAN PREVIEW
+	    // =====================================================
+	    const fotoPreview = document.getElementById("fotoPreview");
+	    if (fotoPreview) {
+	        fotoPreview.src = fotoMurni;
+	        fotoPreview.style.display = "block";
+	    }
+	
+	    // Freeze kamera (opsional tapi disarankan)
+	    if (video) video.style.display = "none";
+	    // stopWebcam(); // aktifkan kalau mau kamera benar-benar mati
+	
+	    // =====================================================
+	    // LANJUT PROSES
+	    // =====================================================
+	
+	    showPopup("Sinkronisasi waktu server...", "loading");
+	
+	    // 2. Sinkronisasi Waktu Server
+	    const response = await fetch(`${GAS_URL}?action=getServerTime`);
+	    const serverTime = await response.json();
+	
+	    // Persiapan Variabel untuk Watermark
+	    const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
+	    const finalKeterangan = "";
+	    const jamTampil = serverTime.waktu + " WITA";
+	    const tanggalServer = serverTime.tanggal;
+	    const hariServer = serverTime.hari;
+	    const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
+	    const gpsSaatFoto = [...gpsData];
+	
+	    const img = new Image();
+	    img.src = fotoMurni;
         img.onload = function () {
             const ctx2 = canvas.getContext("2d");
             ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
