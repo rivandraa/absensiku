@@ -987,12 +987,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (statusEl) {
-        statusEl.addEventListener("change", () => {
-            refreshTargetLocation();
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
-        });
-    }
+statusEl.addEventListener("change", () => {
+    targetLocation = null; // reset langsung
+    refreshTargetLocation();
+});
+
     
     // === restart gps ===
     if (restartBtn) {
