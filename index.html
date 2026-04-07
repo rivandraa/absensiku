@@ -791,15 +791,29 @@ async function refreshTargetLocation(callback) {
     }
     
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-        console.log("SET KOORDINAT KE -");
+        console.log("MODE TANPA LOKASI AKTIF");
     
         if (tampil) tampil.value = "-";
         if (hidden) hidden.value = "-";
-        resetGPSState();
-      if (typeof callback === "function") callback();
+    
+        targetLocation = null;
+        lastTargetLocation = null;
+    
+        // 🔥 INI KUNCI UTAMA
+        if (gpsWatcherId) {
+            navigator.geolocation.clearWatch(gpsWatcherId);
+            gpsWatcherId = null;
+        }
+    
+        if (gpsMonitorInterval) {
+            clearInterval(gpsMonitorInterval);
+            gpsMonitorInterval = null;
+        }
+    
+        if (typeof callback === "function") callback();
         return;
     }
-
+  
     try {
         isFetchingLocation = true;
         const url = `${GAS_URL}?action=getTargetLocation&username=${encodeURIComponent(userRequesting)}&status=${encodeURIComponent(currentStatus)}`;
