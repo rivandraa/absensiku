@@ -619,7 +619,7 @@ function startGPS(onReady) {
     startGPSMonitoring(onReady);
 
     // 🔥 fetch belakangan (tidak blocking)
-    refreshTargetLocation();
+    refreshTargetLocation(null, false);
 }
 
 
@@ -762,7 +762,17 @@ async function refreshTargetLocation(callback) {
     const tampil = document.getElementById("titikKoordinatTampil");
     const hidden = document.getElementById("titikKoordinat");
 
-    // 1. Jika Status Khusus, Langsung Eksekusi & Berhenti
+	// =========================================================
+    // LOGIKA ANTI-KEDIP (Hanya reset jika BUKAN dari interval)
+    // =========================================================
+    if (!isSilent) {
+        targetLocation = null; 
+        if (tampil) tampil.value = "Sedang mengambil data...";
+        if (hidden) hidden.value = "";
+    }
+    // =========================================================
+
+	// 1. Jika Status Khusus, Langsung Eksekusi & Berhenti
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
         targetLocation = null;
         lastTargetLocation = null;
@@ -772,13 +782,6 @@ async function refreshTargetLocation(callback) {
         if (typeof callback === "function") callback();
         return; 
     }
-
-    // LOGIKA ANTI-KEDIP (Hanya reset jika BUKAN dari interval)
-    // =========================================================
-   
-        targetLocation = null; 
-    
-    // =========================================================
 
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
@@ -964,7 +967,7 @@ function startGPSMonitoring(onReady) {
         gpsMonitorInterval = setInterval(() => {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
-            refreshTargetLocation();
+            refreshTargetLocation(null, true);
         }, 3000);
     }
 }
@@ -981,7 +984,7 @@ document.addEventListener("DOMContentLoaded", () => {
        //     stopGPSMonitoring(); 
 
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation();
+            refreshTargetLocation(null, false);
 
             // 3. Beri jeda 500ms sebelum menghidupkan kembali
         //    setTimeout(() => {
