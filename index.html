@@ -971,7 +971,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	        gpsSystemActive = false;
 	        stopGPSMonitoring();
 	
-	        restartBtn.innerHTML = "⏳ Sedang Restart...";
+	        restartBtn.innerHTML = "⏳ Restarting GPS";
 	        restartBtn.disabled = true;
 	        startGPS(() => {
 	            restartBtn.innerHTML = "🔄 Restart GPS";
@@ -1066,25 +1066,54 @@ async function startWebcam() {
   }
 }
 
-// Event Listener Restart Camera
+// Event Listener Restart Camera dan reset foto
 document.getElementById("restartCamera").addEventListener("click", async function () {
-  this.innerHTML = "⏳ Starting...";
+  this.innerHTML = "⏳ Starting Kamera";
   this.disabled = true;
+
   await startWebcam();
+
   setTimeout(() => {
     this.innerHTML = "📷 Start/Restart Kamera";
     this.disabled = false;
   }, 500);
 });
 
+
+// 🔥 Fungsi utama reset
 function resetFoto(showNotif = false) {
-  fotoData = null;
-  const fotoPreview = document.getElementById("fotoPreview");
-  const video = document.getElementById("video");
-  if (fotoPreview) { fotoPreview.src = ""; fotoPreview.style.display = "none"; }
-  if (video) { video.style.display = "block"; }
-  if (showNotif) showPopup("⚠️ Foto berhasil direset.", "warning");
+
+    // 🔒 Proteksi snap dipindah ke sini (biar semua konsisten)
+    if (isSnapping) {
+        showTempPopup("⏳ Sedang memproses foto.", "warning", 1000);
+        vibrateAlertShort();
+        return;
+    }
+
+    fotoData = null;
+
+    const fotoPreview = document.getElementById("fotoPreview");
+    const video = document.getElementById("video");
+
+    if (fotoPreview) {
+        fotoPreview.src = "";
+        fotoPreview.style.display = "none";
+    }
+
+    if (video) {
+        video.style.display = "block";
+    }
+
+    if (showNotif) {
+        showPopup("Reset Foto berhasil.", "warning");
+    }
 }
+
+
+// 🔥 Event listener cukup panggil fungsi
+document.getElementById('reset').addEventListener('click', () => {
+    resetFoto(true);
+});
 
 // ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
@@ -1379,27 +1408,6 @@ document.getElementById('snap').addEventListener('click', async () => {
     }
 });
 
-// ================================
-// Restart Kamera dan Foto
-// ================================
-document.getElementById('reset').addEventListener('click', () => {
-    // 🔒 Cegah klik saat Snap sedang berlangsung
-    if (isSnapping) {
-        showTempPopup("⏳ Sedang memproses foto.", "warning", 1000);
-        vibrateAlertShort();
-        return;
-    }
-
-    fotoData = null;
-    const fotoPreview = document.getElementById("fotoPreview");
-    const video = document.getElementById("video");
-    fotoPreview.src = "";
-    fotoPreview.style.display = "none";
-    video.style.display = "block";
-    //startWebcam();
-    showPopup("Reset Foto.", "warning");
-});
-  
 /* =========================================================================================================
 Fungsi untuk menyembunyikan, lokasi dan kamera
 ========================================================================================================= */
