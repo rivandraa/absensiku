@@ -659,10 +659,6 @@ function resetGPSState() {
     isFetchingLocation = false;
 
     // reset tampilan
-    ["titikKoordinatTampil", "titikKoordinat"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = "Sedang mengambil data...";
-    });
 
     //updateGPSDisplay("Silakan tunggu...");
 }
@@ -776,6 +772,9 @@ async function refreshTargetLocation(callback) {
         if (typeof callback === "function") callback();
         return; 
     }
+
+    targetLocation = null; // Hapus data koordinat lama di memori
+    if (tampil) tampil.value = "Sedang mengambil data...";
 
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
