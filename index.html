@@ -775,11 +775,9 @@ async function refreshTargetLocation(callback) {
 
     // LOGIKA ANTI-KEDIP (Hanya reset jika BUKAN dari interval)
     // =========================================================
-    if (!isSilent) {
+   
         targetLocation = null; 
-        if (tampil) tampil.value = "Sedang mengambil data...";
-        if (hidden) hidden.value = "";
-    }
+    
     // =========================================================
 
     if (!currentStatus || currentStatus === "Pilih Status...") {
@@ -966,7 +964,7 @@ function startGPSMonitoring(onReady) {
         gpsMonitorInterval = setInterval(() => {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
-            refreshTargetLocation(null, true);
+            refreshTargetLocation();
         }, 3000);
     }
 }
