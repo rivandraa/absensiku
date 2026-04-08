@@ -1480,6 +1480,7 @@ function logout(fromIdle = false){
     } else {
         showPopup("Logout berhasil. Terima Kasih selamat beraktifitas !!","success");
     }
+}
 
 // ========= // Reset Idle Timer ==========//
 let idleTimer; // Variabel global untuk manajemen timer idle (jika diperlukan nanti)
@@ -1788,7 +1789,10 @@ async function loadLaporan_Absensi() {
             showPopup("Data berhasil dimuat", "success", 1000);
             
             // 1. Render Kop
-			$("#kopLaporan").text(res.kop || "LAPORAN ABSENSI");
+			$("#kopLaporan").html(`
+			    LAPORAN ABSENSI<br>
+			    ${res.kop || ""}
+			`);
 
             // 2. Render Header
             let theadHtml = "<tr>";
