@@ -697,14 +697,14 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     if (currentLat === 0) return;
 
-    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
+    let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
     
     // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > MAX_ACCURACY) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n" +
-                       "Sedang meningkatkan akurasi" + ".".repeat(accDots);
+        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n` +
+               `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
     } else {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n";
+        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n`;
     }
 
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
