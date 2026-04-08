@@ -147,7 +147,7 @@ body.locked {
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Dinas">Dinas</option>
-                <option value="WFH">WFH</option>
+                <!-- <option value="WFH">WFH</option> -->
             </select>
         </div>
 
@@ -2162,10 +2162,9 @@ $(document).ready(function() {
     Fungsi lainnya
 ===================================================== */
 // Fungsi autoresize
-function autoResize(el) {
-    const minHeight = 2.8 * parseFloat(getComputedStyle(el).lineHeight);
-    el.style.height = "auto";
-    el.style.height = Math.max(el.scrollHeight, minHeight) + "px";
+function autoResize(el) { 
+    el.style.height = 'auto'; 
+    el.style.height = el.scrollHeight + 'px'; 
 }
 
 function autoFitText(selector, maxSize = 22, minSize = 10) {
