@@ -1456,57 +1456,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* =========================================================================================================
-    BAGIAN KODE LOGOUT, IDLE TIMER
-    Fungsi: Menangani logout manual/otomatis, monitoring aktivitas user
-========================================================================================================= */
-// ========= // Logout User ==========//
-function logout(fromIdle = false){
-    popupActive = false;
-
-    stopGPSMonitoring();
-    resetFoto();
-    stopWebcam(); // Hentikan Kamera
-    
-    sessionStorage.removeItem('userData'); 
-    sessionStorage.removeItem('page');
-    userData = null;
-    fotoData = null; 
-    
-    $('#username,#password,#keterangan').val(''); 
-    $('#status').val('');
-    $('#AbsensiPage').hide();
-    $('#InnerPage').hide();
-    $('#LoginPage').show();
-    hideAlerts(); 
-    
-    if (fromIdle) {
-        showPopup("Anda telah logout otomatis karena tidak aktif.","warning"); 
-    } else {
-        showPopup("Logout berhasil. Terima Kasih selamat beraktifitas !!","success");
-    }
-}
-
-// ========= // Reset Idle Timer ==========//
-let idleTimer; // Variabel global untuk manajemen timer idle (jika diperlukan nanti)
-
-const idleTimeout = 3*60*1000; // 3 menit
-
-function resetIdleTimer(){ 
-    clearTimeout(idleTimer); 
-    idleTimer=setTimeout(()=>{
-        if(userData){ 
-            logout(true); 
-        }
-    }, idleTimeout);
-}
-
-['mousemove','keydown','click','touchstart'].forEach(evt =>
-  document.addEventListener(evt, resetIdleTimer)
-);
-
-function startIdleTimer(){ resetIdleTimer(); }
-
-/* =========================================================================================================
     SUBMIT ABSENSI
     Fungsi: pengiriman data absensi
 ========================================================================================================= */
@@ -1525,6 +1474,8 @@ function startIdleTimer(){ resetIdleTimer(); }
 // ================================
 // Submit Absensi
 // ================================
+let isSubmitting = false;
+	
 async function submitAbsensiForm() {
     if (typeof hideAlerts === "function") hideAlerts();
 
@@ -2041,6 +1992,57 @@ function closePengaturanPasswordForm() {
         //startWebcam();
     }
 }
+
+/* =========================================================================================================
+    BAGIAN KODE LOGOUT, IDLE TIMER
+    Fungsi: Menangani logout manual/otomatis, monitoring aktivitas user
+========================================================================================================= */
+// ========= // Logout User ==========//
+function logout(fromIdle = false){
+    popupActive = false;
+
+    stopGPSMonitoring();
+    resetFoto();
+    stopWebcam(); // Hentikan Kamera
+    
+    sessionStorage.removeItem('userData'); 
+    sessionStorage.removeItem('page');
+    userData = null;
+    fotoData = null; 
+    
+    $('#username,#password,#keterangan').val(''); 
+    $('#status').val('');
+    $('#AbsensiPage').hide();
+    $('#InnerPage').hide();
+    $('#LoginPage').show();
+    hideAlerts(); 
+    
+    if (fromIdle) {
+        showPopup("Anda telah logout otomatis karena tidak aktif.","warning"); 
+    } else {
+        showPopup("Logout berhasil. Terima Kasih selamat beraktifitas !!","success");
+    }
+}
+
+// ========= // Reset Idle Timer ==========//
+let idleTimer; // Variabel global untuk manajemen timer idle (jika diperlukan nanti)
+
+const idleTimeout = 3*60*1000; // 3 menit
+
+function resetIdleTimer(){ 
+    clearTimeout(idleTimer); 
+    idleTimer=setTimeout(()=>{
+        if(userData){ 
+            logout(true); 
+        }
+    }, idleTimeout);
+}
+
+['mousemove','keydown','click','touchstart'].forEach(evt =>
+  document.addEventListener(evt, resetIdleTimer)
+);
+
+function startIdleTimer(){ resetIdleTimer(); }
 
 /* =========================================================================================================
     INIT HALAMAN (Inisialisasi Saat Halaman Dimuat)
