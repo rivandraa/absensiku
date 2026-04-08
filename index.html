@@ -1079,10 +1079,8 @@ document.getElementById("restartCamera").addEventListener("click", async functio
   }, 500);
 });
 
-
 // 🔥 Fungsi utama reset
 function resetFoto(showNotif = false) {
-
     // 🔒 Proteksi snap dipindah ke sini (biar semua konsisten)
     if (isSnapping) {
         showTempPopup("⏳ Sedang memproses foto.", "warning", 1000);
@@ -1108,8 +1106,6 @@ function resetFoto(showNotif = false) {
         showPopup("Reset Foto berhasil.", "warning");
     }
 }
-
-
 // 🔥 Event listener cukup panggil fungsi
 document.getElementById('reset').addEventListener('click', () => {
     resetFoto(true);
