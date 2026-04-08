@@ -193,11 +193,12 @@ body {
 textarea.form-control {
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 10px;
-    line-height: 1.4;
-    resize: none;
-    overflow: hidden;
-    min-height: 2.8em; /* kira-kira tinggi 2 baris */
+    resize: none;          /* Nonaktifkan resize manual */
+    overflow: hidden;      /* Hilangkan scroll bar */
+    transition: height 0.2s ease;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    padding: 10px;
 }
 
 /* ============================
