@@ -863,8 +863,8 @@ function startGPSMonitoring(onReady) {
 	        gpsData = [0, 0];
 	        
 	        // RESET FLAG agar saat nyala lagi bisa trigger startWatch
-	        wasGPSEnabled = false; 
-	        lastGPSEnabled = false;
+	        //wasGPSEnabled = false; 
+	        //lastGPSEnabled = false;
 	
 	        updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
 	
@@ -879,8 +879,8 @@ function startGPSMonitoring(onReady) {
 	
 	    // Jika GPS NYALA (dan sebelumnya mati atau watcher belum jalan)
 	    if (gpsEnabled && (!wasGPSEnabled || gpsWatcherId === null)) {
-	        wasGPSEnabled = true;
-	        lastGPSEnabled = true;
+	        //wasGPSEnabled = true;
+	        //lastGPSEnabled = true;
 	        gpsErrorActive = false;
 	        
 	        if (typeof forceClosePopup === "function") forceClosePopup();
