@@ -849,36 +849,46 @@ function startGPSMonitoring(onReady) {
         return;
     }
 
-    async function handleGPS() {
-        const gpsEnabled = await isGPSEnabledUniversal();
-        if (gpsEnabled === lastGPSEnabled) return;
-        lastGPSEnabled = gpsEnabled;
-
-        if (!gpsEnabled) {
-            if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
-            gpsWatcherId = null;
-            stopGPSLoading();
-            if (accAnim) { clearInterval(accAnim); accAnim = null; }
-            gpsData = [0, 0];
-            updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
-
-            if (!gpsErrorActive) {
-                gpsErrorActive = true;
-                showPopup("⚠️ Periksa GPS Anda.", "error", false);
-            }
-
-            if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
-            return;
-        }
-
-        if (!wasGPSEnabled) {
-            wasGPSEnabled = true;
-            gpsErrorActive = false;
-            forceClosePopup();
-            startGPSLoading();
-            startWatch();
-        }
-    }
+	async function handleGPS() {
+	    const gpsEnabled = await isGPSEnabledUniversal();
+	    
+	    // Jika GPS MATI
+	    if (!gpsEnabled) {
+	        if (gpsWatcherId !== null) {
+	            navigator.geolocation.clearWatch(gpsWatcherId);
+	            gpsWatcherId = null;
+	        }
+	        stopGPSLoading();
+	        stopAccAnim();
+	        gpsData = [0, 0];
+	        
+	        // RESET FLAG agar saat nyala lagi bisa trigger startWatch
+	        wasGPSEnabled = false; 
+	        lastGPSEnabled = false;
+	
+	        updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
+	
+	        if (!gpsErrorActive) {
+	            gpsErrorActive = true;
+	            if (typeof showPopup === "function") showPopup("⚠️ Periksa GPS Anda.", "error", false);
+	        }
+	
+	        if (typeof onReady === "function") onReady(); 
+	        return;
+	    }
+	
+	    // Jika GPS NYALA (dan sebelumnya mati atau watcher belum jalan)
+	    if (gpsEnabled && (!wasGPSEnabled || gpsWatcherId === null)) {
+	        wasGPSEnabled = true;
+	        lastGPSEnabled = true;
+	        gpsErrorActive = false;
+	        
+	        if (typeof forceClosePopup === "function") forceClosePopup();
+	        
+	        startGPSLoading();
+	        startWatch(); // Jalankan ulang watcher
+	    }
+	}
 
     function startWatch() {
         if (!gpsSystemActive) return;
