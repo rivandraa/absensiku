@@ -851,8 +851,11 @@ function startGPSMonitoring(onReady) {
 
     async function handleGPS() {
         const gpsEnabled = await isGPSEnabledUniversal();
-        if (gpsEnabled === lastGPSEnabled) return;
-        lastGPSEnabled = gpsEnabled;
+		if (gpsEnabled === lastGPSEnabled) {
+		    // 🔥 tetap lanjut untuk monitoring, tapi tidak ulang logic berat
+		} else {
+		    lastGPSEnabled = gpsEnabled;
+		}
 
         if (!gpsEnabled) {
             if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
