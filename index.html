@@ -562,36 +562,13 @@ function isWebView() {
 }
 
 async function isGPSEnabledUniversal() {
-    // 1. Jika di Android WebView (Menggunakan Bridge Java/Kotlin)
     if (isWebView()) {
-        try { 
-            return GPSBridge.isGPSEnabled(); // Ini sangat akurat di Android
-        } catch (e) { 
-            return true; 
-        }
+        try { return GPSBridge.isGPSEnabled(); } catch { return true; }
     }
-
-    // 2. Jika di Browser Biasa (Chrome/Safari/dll)
-    return new Promise((resolve) => {
-        // Cek izin dulu (Cepat)
-        navigator.permissions.query({ name: "geolocation" }).then(perm => {
-            if (perm.state === "denied") {
-                resolve(false);
-                return;
-            }
-
-            // Jika izin OK, kita pancing sensornya (Akurat)
-            // timeout 1500ms cukup untuk tahu hardware aktif atau tidak
-            navigator.geolocation.getCurrentPosition(
-                () => resolve(true),  // Merespon = Hardware ON
-                () => resolve(false), // Error/Timeout = Hardware OFF
-                { enableHighAccuracy: false, timeout: 1500, maximumAge: 0 }
-            );
-        }).catch(() => {
-            // Fallback jika navigator.permissions tidak didukung
-            resolve(true);
-        });
-    });
+    try {
+        const perm = await navigator.permissions.query({ name: "geolocation" });
+        return perm.state !== "denied";
+    } catch { return true; }
 }
 
 // =====================================================
