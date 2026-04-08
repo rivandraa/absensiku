@@ -850,11 +850,7 @@ function startGPSMonitoring(onReady) {
     	const gpsEnabled = await isGPSEnabledUniversal();
 
     	// Jika status benar-benar berubah, baru kita proses berat
-    	//if (gpsEnabled !== lastGPSEnabled || (gpsEnabled && gpsWatcherId === null)) {
-        //lastGPSEnabled = gpsEnabled;
-
-		// Tidak berubah → tidak lakukan apa-apa
-        if (gpsEnabled === lastGPSEnabled) return;
+    	if (gpsEnabled !== lastGPSEnabled || (gpsEnabled && gpsWatcherId === null)) {
         lastGPSEnabled = gpsEnabled;
 
         if (!gpsEnabled) {
@@ -880,7 +876,7 @@ function startGPSMonitoring(onReady) {
 		    if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
             return;
 		}
-	//}
+	}
 
     function startWatch() {
         if (!gpsSystemActive) return;
