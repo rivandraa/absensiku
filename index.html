@@ -57,17 +57,6 @@ body.locked {
 
 <!-- =========================================================================================================
      BAGIAN LOGIN PAGE
-     Fungsi: Menampilkan form login layanan absensi pegawai
-     Detail:
-     - Title & Subtitle menunjukkan identitas instansi dan tujuan halaman
-     - Menampilkan tanggal dan waktu real-time di div #tanggalWaktuLogin
-     - Alert untuk menampilkan error login
-     - Form login:
-         - Input username (required)
-         - Input password (required)
-         - Tombol submit untuk login
-     - Form di-submit melalui fungsi JS loginUser()
-     - Tujuan: Memastikan hanya user terdaftar yang bisa mengakses layanan absensi
 ========================================================================================================= -->
 <div class="container" id="LoginPage" style="display:none;">
 
@@ -89,10 +78,12 @@ body.locked {
             <label>Username</label>
             <input type="text" id="username" class="form-control" required>
         </div>
+
         <div class="form-group">
             <label>Password</label>
             <input type="password" id="password" class="form-control" required>
         </div>
+
         <div class="button">
             <input type="submit" value="LOGIN">
         </div>
@@ -102,23 +93,6 @@ body.locked {
 
 <!-- =========================================================================================================
      BAGIAN ABSENSI PAGE
-     Fungsi: Menampilkan form absensi pegawai untuk mengisi status, keterangan, GPS, dan foto dokumentasi
-     Detail:
-     - Title & Subtitle menunjukkan identitas instansi dan tujuan halaman
-     - Menampilkan tanggal dan waktu real-time di div #tanggalWaktuAbsen
-     - Form absensi mencakup:
-         - Nama & Jabatan (readonly)
-         - Status Absen (Hadir, Izin, Sakit, Dinas, WFH)
-         - Keterangan (textarea, auto-resize)
-         - GPS (textarea readonly, diisi otomatis)
-         - Dokumentasi Foto (video preview, foto capture, reset)
-     - Tombol aksi:
-         - Kirim Absen
-         - Laporan Absensi Pegawai
-         - Pengaturan Password
-         - Logout
-     - Alert untuk error atau peringatan GPS
-     - Tujuan: Memudahkan pegawai melakukan absensi lengkap dengan validasi dan dokumentasi
 ========================================================================================================= -->
 <div class="container" id="AbsensiPage" style="display:none;">
 
@@ -132,13 +106,14 @@ body.locked {
     <!-- ========= Form Absensi ========= -->
     <form onsubmit="submitAbsensiForm(); return false;">
 
-        <!-- Nama & Jabatan (readonly) -->
+        <!-- Nama & Jabatan -->
         <div class="form-group">
             <label for="perangkat">👤 Nama | 💼 Jabatan</label>
             <input type="text" id="perangkatDisplay" class="form-control" readonly>
             <input type="hidden" id="perangkatData">
         </div>
 
+        <!-- Status -->
         <div class="form-group">
             <label>📋 Status Absen</label>
             <select id="status" class="form-control">
@@ -154,104 +129,119 @@ body.locked {
         <!-- Keterangan -->
         <div class="form-group">
             <label for="keterangan">💬 Keterangan</label>
-            <textarea id="keterangan" class="form-control" 
-                      placeholder="Mohon isi keterangan jika Izin, Sakit, sedang menjalankan tugas di luar kantor atau sedang Dinas"
-                      rows="2" 
-                      oninput="autoResize(this)"></textarea>
+            <textarea
+                id="keterangan"
+                class="form-control"
+                placeholder="Mohon isi keterangan jika Izin, Sakit, sedang menjalankan tugas di luar kantor atau sedang Dinas"
+                rows="2"
+                oninput="autoResize(this)"
+            ></textarea>
         </div>
 
+        <!-- Titik Koordinat -->
         <div class="form-group mb-3">
             <label for="titikKoordinatTampil">📍 Titik Koordinat Absensi</label>
-            <!-- INPUT YANG DITAMPILKAN -->
             <input type="text" id="titikKoordinatTampil" class="form-control" value="Sedang mengambil data..." readonly>
-            <!-- INPUT HIDDEN UNTUK DATA SESUNGGUHNYA -->
             <input type="hidden" id="titikKoordinat">
         </div>
 
         <!-- GPS -->
         <div class="form-group mb-3">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label for="gps" style="margin:0;">🛰️ Lokasi (GPS)</label>
-            <button type="button" id="restartGPS" class="btn-gps">
-              🔄 Restart GPS
-            </button>
-          </div>          
-          
-            <div id="gps" class="form-control" 
-                 style="margin-top:8px; 
-                        min-height: 100px; /* Kunci tinggi minimal */
-                        max-height: 500px; 
-                        overflow-y: auto; 
-                        white-space: pre-wrap; 
-                        font-family: monospace; 
-                        font-size: 14px !important; /* Paksa ukuran font tetap */
-                        line-height: 1.5; /* Jaga jarak antar baris */
-                        border: 1px solid #ccc; 
-                        padding: 8px;
-                        -webkit-text-size-adjust: none; /* KUNCI UTAMA: Mencegah font mengecil/membesar otomatis */
-                        text-size-adjust: none;" 
-                 readonly>
-              Silakan tunggu...
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label for="gps" style="margin:0;">🛰️ Lokasi (GPS)</label>
+                <button type="button" id="restartGPS" class="btn-gps">
+                    🔄 Restart GPS
+                </button>
+            </div>          
+
+            <div
+                id="gps"
+                class="form-control"
+                style="
+                    margin-top:8px;
+                    min-height: 100px;
+                    max-height: 500px;
+                    overflow-y: auto;
+                    white-space: pre-wrap;
+                    font-family: monospace;
+                    font-size: 14px !important;
+                    line-height: 1.5;
+                    border: 1px solid #ccc;
+                    padding: 8px;
+                    -webkit-text-size-adjust: none;
+                    text-size-adjust: none;
+                "
+                readonly
+            >
+                Silakan tunggu...
             </div>
-          <input type="hidden" id="gpsHidden" name="gps">
+
+            <input type="hidden" id="gpsHidden" name="gps">
         </div>
 
-        <!-- Dokumentasi Foto -->
+        <!-- Kamera -->
         <div class="form-group mb-3">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="margin:0;">📸 Dokumentasi</label>
-          <button type="button" id="restartCamera" class="btn-gps">
-            📷 Start/Restart Kamera
-          </button>
-        </div>
-
-        <div id="cameraContainer" style="margin-top:8px;">
-            <video id="video" autoplay playsinline muted></video>
-            <img id="fotoPreview" style="display:none;">
-        </div>
-      </div>
-
-
-            <!-- Tombol Foto, Reset, Logout -->
-            <div class="mt-3 d-flex justify-content-between text-center" id="containerTombolFoto">
-                <button type="button" class="btn btn-secondary flex-fill mx-1" id="reset">
-                    Reset Foto
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">📸 Dokumentasi</label>
+                <button type="button" id="restartCamera" class="btn-gps">
+                    📷 Start/Restart Kamera
                 </button>
-
-                <button type="button" class="btn btn-primary flex-fill mx-1" id="snap">
-                    Ambil Foto
-                </button>
-
             </div>
 
-            <hr>
-
-            <!-- Tombol Submit / Navigasi -->
-            <div class="button mt-3">
-                <input type="submit" id="submitBtn" value="KIRIM ABSEN">
-            </div>
-            <div class="button mt-2">
-                <input type="button" id="Laporan_AbsensiBtn" onclick="showLaporan_Absensi()" value="LAPORAN ABSENSI PEGAWAI">
-            </div>
-            <div class="button mt-2">
-                <input type="button" id="Pengaturan_PasswordBtn" onclick="openPengaturanPasswordForm()" value="PENGATURAN PASSWORD">
-            </div>
-            <div class="button mt-2">
-                <input type="button" id="Notifikasi_AbsensiBtn" 
-                      onclick="window.open('https://t.me/+cYMab7mf3Rk5ZTU1','_blank')" 
-                      value="NOTIFIKASI ABSENSI">
-            </div>
-            <div class="mt-3 d-flex justify-content-between text-center">
-                <button type="button" class="btn btn-danger flex-fill mx-1" onclick="logout()">Logout</button>
-            </div>
-
-            <!-- Alert -->
-            <div class="alert alert-danger mt-3 result-error" style="display:none;"></div>
-            <div class="alert alert-warning mt-3 gps-warning" style="display:none;">
-                <h5>Perhatian!</h5>
-                <p>Anda harus mengizinkan akses lokasi untuk absensi.</p>
+            <div id="cameraContainer" style="margin-top:8px;">
+                <video id="video" autoplay playsinline muted></video>
+                <img id="fotoPreview" style="display:none;">
             </div>
         </div>
+
+        <!-- Tombol Foto -->
+        <div class="mt-3 d-flex justify-content-between text-center" id="containerTombolFoto">
+            <button type="button" class="btn btn-secondary flex-fill mx-1" id="reset">
+                Reset Foto
+            </button>
+
+            <button type="button" class="btn btn-primary flex-fill mx-1" id="snap">
+                Ambil Foto
+            </button>
+        </div>
+
+        <hr>
+
+        <!-- Tombol Aksi -->
+        <div class="button mt-3">
+            <input type="submit" id="submitBtn" value="KIRIM ABSEN">
+        </div>
+
+        <div class="button mt-2">
+            <input type="button" id="Laporan_AbsensiBtn" onclick="showLaporan_Absensi()" value="LAPORAN ABSENSI PEGAWAI">
+        </div>
+
+        <div class="button mt-2">
+            <input type="button" id="Pengaturan_PasswordBtn" onclick="openPengaturanPasswordForm()" value="PENGATURAN PASSWORD">
+        </div>
+
+        <div class="button mt-2">
+            <input
+                type="button"
+                id="Notifikasi_AbsensiBtn"
+                onclick="window.open('https://t.me/+cYMab7mf3Rk5ZTU1','_blank')"
+                value="NOTIFIKASI ABSENSI"
+            >
+        </div>
+
+        <!-- Logout -->
+        <div class="mt-3 d-flex justify-content-between text-center">
+            <button type="button" class="btn btn-danger flex-fill mx-1" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert alert-danger mt-3 result-error" style="display:none;"></div>
+
+        <div class="alert alert-warning mt-3 gps-warning" style="display:none;">
+            <h5>Perhatian!</h5>
+            <p>Anda harus mengizinkan akses lokasi untuk absensi.</p>
+        </div>
+
     </form>
 </div>
 
@@ -607,6 +597,7 @@ let fetchRequestId = 0;
 
 let targetLocation = null;
 let gpsSystemActive = false;
+	
 const RADIUS_LIMIT = 30; // meter
 const MAX_ACCURACY = 50; // meter
 
@@ -622,7 +613,6 @@ function startGPS(onReady) {
     // 🔥 fetch belakangan (tidak blocking)
     refreshTargetLocation(null, false);
 }
-
 
 function stopGPSMonitoring() {
     gpsSystemActive = false;
@@ -711,10 +701,10 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     
     // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > MAX_ACCURACY) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n" +
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > MAX_ACCURACY Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n";
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > MAX_ACCURACY Meter\n";
     }
 
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
@@ -1097,17 +1087,11 @@ function resetFoto(showNotif = false) {
 }
 
 // ================================
-// TOMBOL SNAP (VERSI FETCH)
-// ================================
-// ================================
 // Tombol Snap / Ambil Foto (ANTI BLUR + WATERMARK SETELAH SERVER TIME)
 // ================================
 let fotoTimestamp = null;
 let isSnapping = false;
 
-// ================================
-// TOMBOL SNAP (VERSI PERBAIKAN)
-// ================================
 document.getElementById('snap').addEventListener('click', async () => {
   if (isSnapping) {
     showTempPopup("⏳ Sedang memproses foto, harap tunggu...", "warning");
@@ -1497,42 +1481,6 @@ function logout(fromIdle = false){
         showPopup("Logout berhasil. Terima Kasih selamat beraktifitas !!","success");
     }
 
-//setTimeout(function () {
-
-//    const isTelegram =
-//       typeof window !== "undefined" &&
-//        window.Telegram &&
-//        window.Telegram.WebApp;
-
-//    if (isTelegram && typeof Telegram.WebApp.close === "function") {
-
-//       Telegram.WebApp.close();
-
-//    } else {
-
-//    document.body.innerHTML = `
-//        <div class="container" style="text-align:center; margin-top:20px;">
-//            <h2 style="color:#2c3e50; margin-bottom:15px;">
-//                Terima Kasih 🙏
-//            </h2>
-//            <p style="font-size:18px; color:#555; line-height:1.6;">
-//                Anda Sudah Absen Hari Ini.<br>
-//                Selamat Bekerja.
-//            </p>
-//        </div>
-//    `;
-
-    // 🔥 Reset semua style body agar tidak flex lagi
-//    document.body.style.display = "";
-//    document.body.style.alignItems = "";
-//    document.body.style.justifyContent = "";
-//    document.body.style.height = "";
-//    document.body.style.background = "#2acfe8";
-//    document.body.style.padding = "30px";
-//    }
-//  }, 2000);
-}
-
 // ========= // Reset Idle Timer ==========//
 let idleTimer; // Variabel global untuk manajemen timer idle (jika diperlukan nanti)
 
@@ -1569,12 +1517,6 @@ function startIdleTimer(){ resetIdleTimer(); }
     - Mengirim data absensi ke Google Apps Script
     - Menampilkan popup notifikasi berdasarkan hasil response
 */
-// ================================
-// Submit Absensi
-// ================================
-/**
- * Submit form absensi
- */
 // ================================
 // Submit Absensi
 // ================================
@@ -1846,7 +1788,10 @@ async function loadLaporan_Absensi() {
             showPopup("Data berhasil dimuat", "success", 1000);
             
             // 1. Render Kop
-            $("#kopLaporan").text(res.kop || "LAPORAN ABSENSI");
+			$("#kopLaporan").html(`
+			    LAPORAN ABSENSI<br>
+			    ${res.kop || ""}
+			`);
 
             // 2. Render Header
             let theadHtml = "<tr>";
