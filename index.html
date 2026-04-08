@@ -887,9 +887,7 @@ function startGPSMonitoring(onReady) {
             if (!gpsErrorActive) {
                 gpsErrorActive = true;
                 showPopup("⚠️ Periksa GPS Anda.", "error", false);
-			)
-			if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
-            return;
+            }
         } else {
             // Logika menyalakan kembali
             wasGPSEnabled = true;
@@ -898,6 +896,8 @@ function startGPSMonitoring(onReady) {
             startGPSLoading();
             startWatch();
         }
+		    if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
+            return;
     }
 }
 
