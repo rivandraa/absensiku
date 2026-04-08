@@ -561,17 +561,37 @@ function isWebView() {
     return typeof GPSBridge !== "undefined";
 }
 
-// =====================================================
-// GET GPS ENABLE STATUS (Universal)
-// =====================================================
 async function isGPSEnabledUniversal() {
+    // 1. Jika di Android WebView (Menggunakan Bridge Java/Kotlin)
     if (isWebView()) {
-        try { return GPSBridge.isGPSEnabled(); } catch { return true; }
+        try { 
+            return GPSBridge.isGPSEnabled(); // Ini sangat akurat di Android
+        } catch (e) { 
+            return true; 
+        }
     }
-    try {
-        const perm = await navigator.permissions.query({ name: "geolocation" });
-        return perm.state !== "denied";
-    } catch { return true; }
+
+    // 2. Jika di Browser Biasa (Chrome/Safari/dll)
+    return new Promise((resolve) => {
+        // Cek izin dulu (Cepat)
+        navigator.permissions.query({ name: "geolocation" }).then(perm => {
+            if (perm.state === "denied") {
+                resolve(false);
+                return;
+            }
+
+            // Jika izin OK, kita pancing sensornya (Akurat)
+            // timeout 1500ms cukup untuk tahu hardware aktif atau tidak
+            navigator.geolocation.getCurrentPosition(
+                () => resolve(true),  // Merespon = Hardware ON
+                () => resolve(false), // Error/Timeout = Hardware OFF
+                { enableHighAccuracy: false, timeout: 1500, maximumAge: 0 }
+            );
+        }).catch(() => {
+            // Fallback jika navigator.permissions tidak didukung
+            resolve(true);
+        });
+    });
 }
 
 // =====================================================
@@ -849,29 +869,30 @@ function startGPSMonitoring(onReady) {
         return;
     }
 
-    async function handleGPS() {
-        const gpsEnabled = await isGPSEnabledUniversal();
-        if (gpsEnabled === lastGPSEnabled) return;
+	async function handleGPS() {
+    const gpsEnabled = await isGPSEnabledUniversal();
+
+    // Jika status benar-benar berubah, baru kita proses berat
+    if (gpsEnabled !== lastGPSEnabled || (gpsEnabled && gpsWatcherId === null)) {
         lastGPSEnabled = gpsEnabled;
 
         if (!gpsEnabled) {
+            // Logika mematikan sistem
             if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
             gpsWatcherId = null;
+            wasGPSEnabled = false;
             stopGPSLoading();
-            if (accAnim) { clearInterval(accAnim); accAnim = null; }
-            gpsData = [0, 0];
-            updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
-
+            updateGPSDisplay("⚠️ GPS tidak aktif.");
+            
             if (!gpsErrorActive) {
                 gpsErrorActive = true;
                 showPopup("⚠️ Periksa GPS Anda.", "error", false);
-            }
-
-            if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
+			)
+			if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
             return;
-        }
-
-        if (!wasGPSEnabled) {
+            }
+        } else {
+            // Logika menyalakan kembali
             wasGPSEnabled = true;
             gpsErrorActive = false;
             forceClosePopup();
@@ -879,6 +900,7 @@ function startGPSMonitoring(onReady) {
             startWatch();
         }
     }
+}
 
     function startWatch() {
         if (!gpsSystemActive) return;
