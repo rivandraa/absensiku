@@ -619,7 +619,7 @@ function startGPS(onReady) {
     startGPSMonitoring(onReady);
 
     // 🔥 fetch belakangan (tidak blocking)
-   // refreshTargetLocation();
+    refreshTargetLocation();
 }
 
 
@@ -998,7 +998,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         restartBtn.innerHTML = "⏳ Sedang Restart...";
         restartBtn.disabled = true;
-        refreshTargetLocation();
         startGPS(() => {
             restartBtn.innerHTML = "🔄 Restart GPS";
             restartBtn.disabled = false;
