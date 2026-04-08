@@ -1525,6 +1525,8 @@ function startIdleTimer(){ resetIdleTimer(); }
 // ================================
 // Submit Absensi
 // ================================
+let isSubmitting = false;
+	
 async function submitAbsensiForm() {
     if (typeof hideAlerts === "function") hideAlerts();
 
