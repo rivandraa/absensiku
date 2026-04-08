@@ -809,6 +809,9 @@ async function refreshTargetLocation(callback, isSilent = false) {
             if (hidden) hidden.value = koordinatMurni;
 
             if (gpsData[0] !== 0) forceUpdateDistanceUI();
+        } else {
+            targetLocation = null;
+            if (tampil) tampil.value = "Titik tidak ditemukan";
         }
     } catch (error) {
         console.error("Gagal refresh:", error);
