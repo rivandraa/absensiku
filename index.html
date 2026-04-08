@@ -773,8 +773,14 @@ async function refreshTargetLocation(callback) {
         return; 
     }
 
-    targetLocation = null; // Hapus data koordinat lama di memori
-    if (tampil) tampil.value = "Sedang mengambil data...";
+    // LOGIKA ANTI-KEDIP (Hanya reset jika BUKAN dari interval)
+    // =========================================================
+    if (!isSilent) {
+        targetLocation = null; 
+        if (tampil) tampil.value = "Sedang mengambil data...";
+        if (hidden) hidden.value = "";
+    }
+    // =========================================================
 
     if (!currentStatus || currentStatus === "Pilih Status...") {
         if (tampil) tampil.value = "⚠️ Pilih Status";
@@ -960,7 +966,7 @@ function startGPSMonitoring(onReady) {
         gpsMonitorInterval = setInterval(() => {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
-            refreshTargetLocation();
+            refreshTargetLocation(null, true);
         }, 3000);
     }
 }
