@@ -1788,10 +1788,7 @@ async function loadLaporan_Absensi() {
             showPopup("Data berhasil dimuat", "success", 1000);
             
             // 1. Render Kop
-			$("#kopLaporan").html(`
-			    LAPORAN ABSENSI<br>
-			    ${res.kop || ""}
-			`);
+			$("#kopLaporan").text(res.kop || "LAPORAN ABSENSI");
 
             // 2. Render Header
             let theadHtml = "<tr>";
