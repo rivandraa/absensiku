@@ -818,7 +818,9 @@ async function refreshTargetLocation(callback, isSilent = false) {
             if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
 
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+            if (gpsData[0] !== 0) {
+            forceUpdateDistanceUI(gpsData[0], gpsData[1], null);
+			}
         } else {
             targetLocation = null;
             if (tampil) tampil.value = "Titik tidak ditemukan";
@@ -982,7 +984,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            updateGPSDisplay("Menghitung jarak ke lokasi baru...");
+            
+            // Panggil refresh target
             refreshTargetLocation(null, false);
+            
+            // Jika GPS sudah aktif, paksa hitung ulang dengan target null dulu (untuk reset tombol kamera)
+            if (gpsData[0] !== 0) {
+                forceUpdateDistanceUI(gpsData[0], gpsData[1], null);
+            }
         });
     }
     
