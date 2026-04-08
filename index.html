@@ -608,6 +608,7 @@ let fetchRequestId = 0;
 let targetLocation = null;
 let gpsSystemActive = false;
 const RADIUS_LIMIT = 30; // meter
+const MAX_ACCURACY = 50; // meter
 
 // =====================================================
 // START & STOP GPS
@@ -659,7 +660,6 @@ function resetGPSState() {
     isFetchingLocation = false;
 
     // reset tampilan
-
     //updateGPSDisplay("Silakan tunggu...");
 }
 
@@ -710,11 +710,11 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
     
     // Jika akurasi masih buruk (saat animasi)
-    if (acc && acc > 30) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
+    if (acc && acc > ${MAX_ACCURACY}) {
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n";
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n";
     }
 
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
@@ -970,42 +970,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (statusEl) {
         statusEl.addEventListener("change", () => {
-            // 1. Matikan sistem yang berjalan saat ini
-       //     gpsSystemActive = false;
-       //     stopGPSMonitoring(); 
-
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
             refreshTargetLocation(null, false);
-
-            // 3. Beri jeda 500ms sebelum menghidupkan kembali
-        //    setTimeout(() => {
-            //    gpsSystemActive = true;
-                // Panggil startGPS() saja, karena di dalam startGPS 
-                // sudah ada perintah gpsSystemActive = true
-           //     startGPSMonitoring(); 
-           // }, 200);
         });
     }
     
     // === restart gps ===
 	if (restartBtn) {
-    restartBtn.addEventListener("click", () => {
-        gpsSystemActive = false;
-        stopGPSMonitoring();
-
-        restartBtn.innerHTML = "⏳ Sedang Restart...";
-        restartBtn.disabled = true;
-        startGPS(() => {
-            restartBtn.innerHTML = "🔄 Restart GPS";
-            restartBtn.disabled = false;
-
-            if (typeof showPopup === "function") {
-                showPopup("GPS berhasil di-restart.", "success", 5000);
-            	}
-        	});
-    	});
-	}
-});
+	    restartBtn.addEventListener("click", () => {
+	        gpsSystemActive = false;
+	        stopGPSMonitoring();
+	
+	        restartBtn.innerHTML = "⏳ Sedang Restart...";
+	        restartBtn.disabled = true;
+	        startGPS(() => {
+	            restartBtn.innerHTML = "🔄 Restart GPS";
+	            restartBtn.disabled = false;
+	
+	            if (typeof showPopup === "function") {
+	                showPopup("GPS berhasil di-restart.", "success", 5000);
+	            	}
+	        	});
+	    	});
+		}
+	});
+	
 /* =========================================================================================================
     BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REDESAIN + ERROR MAPPING)
     - Live view: mirror (selfie) di video saja
