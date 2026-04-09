@@ -711,26 +711,29 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     const elNama = document.getElementById("titikKoordinatTampil");
     const namaLokasi = (elNama && elNama.value) ? elNama.value : "Area Absensi";
 
-    // Gunakan koordinat dari parameter atau dari memory
+    // 1. Ambil koordinat & akurasi (Gunakan fallback agar tidak undefined)
     const currentLat = lat || gpsData[0];
     const currentLon = lon || gpsData[1];
-
-    if (currentLat === 0) return;
     
-	// BARIS 1 & 2 (Selalu muncul di atas)
+    // 🔥 PERBAIKAN: Definisikan displayAcc di sini
+    const displayAcc = acc || (window.lastKnownAcc || 0);
+
+    // Jika koordinat masih nol, jangan lanjut (tunggu fix GPS)
+    if (currentLat === 0) return;
+
+    // BARIS 1 & 2 (Selalu muncul)
     let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
     displayText += `Tingkat Akurasi : ${displayAcc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n`;
 
-    // BARIS 3 (Logika Kondisional - Pilih salah satu agar tidak ada spasi kosong)
+    // BARIS 3 (Logika Kondisional)
     if (displayAcc > MAX_ACCURACY) {
         // A. Jika Akurasi masih buruk
         displayText += `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
-        lastInsideArea = false; // Tombol kamera mati jika akurasi buruk
-    } 
+        lastInsideArea = false; 
+    }  
     else if (status === "Hadir" || status === "WFH") {
-        // B. Jika Akurasi sudah Bagus, cek status Hadir/WFH
+        // B. Jika Akurasi sudah Bagus
         if (targetLocation) {
-            // Hitung Jarak jika data target sudah ada
             const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
             const insideArea = distance <= RADIUS_LIMIT;
             lastInsideArea = insideArea;
@@ -739,18 +742,16 @@ function forceUpdateDistanceUI(lat, lon, acc) {
                 ? `✅ Berada dalam area/radius ${namaLokasi}`
                 : `❌ Di luar area | 📏 Jarak ${distance.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`;
         } else {
-            // Tampilan saat fetch data kantor
+            // Tampilan saat fetch data kantor (Tanpa \n di awal agar tidak ada baris kosong)
             displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
             lastInsideArea = false;
         }
-    } 
+    }  
     else if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        // C. Jika status non-lokasi
         displayText += `-`;
         lastInsideArea = true;
-    } 
+    }  
     else {
-        // D. Jika belum pilih status
         displayText += `⚠️ Pilih Status Absen`;
         lastInsideArea = false;
     }
