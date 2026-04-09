@@ -1210,42 +1210,33 @@ document.getElementById('snap').addEventListener('click', async () => {
     return;
   }
 
-	// 2. VALIDASI GPS & RADIUS (DISEMPURNAKAN)
-	// Cek apakah koordinat user sudah ada
-	if (gpsData[0] === 0 && gpsData[1] === 0) {
-	    showPopup("⚠️ GPS belum mendapatkan posisi Anda.", "warning");
-	    vibrateAlertShort();
-	    isSnapping = false;
-	    return;
-	}
-	
-	// Cek jika sedang mencari sinyal (animatingGPS), tapi beri toleransi jika akurasi sudah cukup
-	if (animatingGPS && !improvingAccuracy) {
-	    showPopup("⚠️ Menunggu sinyal GPS stabil...", "warning");
-	    vibrateAlertShort();
-	    isSnapping = false;
-	    return;
-	}
-	
-	// VALIDASI KHUSUS HADIR / WFH
-	if (status === "Hadir" || status === "WFH") {
-	    // A. Pastikan data target lokasi (kantor) sudah masuk
-	    if (!targetLocation) {
-	        showPopup("⚠️ Menunggu koordinat absensi dari server...", "warning");
-	        vibrateAlertShort();
-	        isSnapping = false;
-	        return;
-	    }
-	
-	    // B. Cek Radius
-	    const distance = getDistanceFromLatLonInMeters(gpsData[0], gpsData[1], targetLocation.lat, targetLocation.lon);
-	    if (distance > RADIUS_LIMIT) {
-	        showPopup(`❌ Di luar area! Jarak: ${distance.toFixed(0)}m (Max: ${RADIUS_LIMIT}m)`, "error");
-	        vibrateAlertShort();
-	        isSnapping = false;
-	        return;
-	    }
-	}
+  //  VALIDASI GPS & RADIUS
+  if ((gpsData[0] === 0 && gpsData[1] === 0) || animatingGPS || improvingAccuracy) {
+    showPopup("⚠️ GPS tidak aktif atau GPS sedang mencari lokasi / meningkatkan akurasi.", "warning");
+    vibrateAlertShort();
+    isSnapping = false;
+    return;
+  }
+
+  if (status === "Hadir" || status === "WFH") {
+    if (koordinatValue === "Sedang mengambil data...") {
+        showPopup("⚠️ Menunggu koordinat absensi...", "warning");
+		vibrateAlertShort();
+		isSnapping = false;
+        return;
+    }
+    
+    // Mengganti checkUserLocation dengan logika getDistanceFromLatLonInMeters
+    if (targetLocation) {
+        const distance = getDistanceFromLatLonInMeters(gpsData[0], gpsData[1], targetLocation.lat, targetLocation.lon);
+        if (distance > RADIUS_LIMIT) {
+            showPopup(`❌ Di luar area! Jarak: ${distance.toFixed(0)}m`, "error");
+			vibrateAlertShort();
+			isSnapping = false;
+            return;
+        }
+    }
+  }
 
   // 3. PROSES PENGAMBILAN GAMBAR
   showPopup("Mengambil foto...", "loading");
@@ -1452,6 +1443,7 @@ document.getElementById('snap').addEventListener('click', async () => {
         isSnapping = false;
     }
 });
+
 
 /* =========================================================================================================
 Fungsi untuk menyembunyikan, lokasi dan kamera
