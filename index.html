@@ -880,37 +880,36 @@ function startGPSMonitoring(onReady) {
         return;
     }
 
-	async function handleGPS() {
-    	const gpsEnabled = await isGPSEnabledUniversal();
-
-    	// Jika status benar-benar berubah, baru kita proses berat
-    	if (gpsEnabled !== lastGPSEnabled || (gpsEnabled && gpsWatcherId === null)) {
+    async function handleGPS() {
+        const gpsEnabled = await isGPSEnabledUniversal();
+        if (gpsEnabled === lastGPSEnabled) return;
         lastGPSEnabled = gpsEnabled;
 
         if (!gpsEnabled) {
-            // Logika mematikan sistem
             if (gpsWatcherId !== null) navigator.geolocation.clearWatch(gpsWatcherId);
             gpsWatcherId = null;
-            wasGPSEnabled = false;
             stopGPSLoading();
-            updateGPSDisplay("⚠️ GPS tidak aktif.");
-            
+            if (accAnim) { clearInterval(accAnim); accAnim = null; }
+            gpsData = [0, 0];
+            updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
+
             if (!gpsErrorActive) {
                 gpsErrorActive = true;
                 showPopup("⚠️ Periksa GPS Anda.", "error", false);
             }
-        } else {
-            // Logika menyalakan kembali
+
+            if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
+            return;
+        }
+
+        if (!wasGPSEnabled) {
             wasGPSEnabled = true;
             gpsErrorActive = false;
             forceClosePopup();
             startGPSLoading();
             startWatch();
         }
-		    if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
-            return;
-		}
-	}
+    }
 
     function startWatch() {
         if (!gpsSystemActive) return;
@@ -933,7 +932,7 @@ function startGPSMonitoring(onReady) {
                     }
                 }
 
-                if (acc > MAX_ACCURACY) {
+                if (acc > 30) {
                     gpsData = [lat, lon];
                     startAccAnim(lat, lon, acc);
                 } else {
@@ -984,7 +983,7 @@ function startGPSMonitoring(onReady) {
         }, 3000);
     }
 }
-
+	
     // ====== EVENT LISTENER STATUS ======
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
