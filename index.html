@@ -1516,10 +1516,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Submit Absensi
 // ================================
 let isSubmitting = false;
-	
+
 async function submitAbsensiForm() {
     if (typeof hideAlerts === "function") hideAlerts();
 
+    // 🚫 Cegah double submit
     if (isSubmitting) {
         showTempPopup("⏳ Absensi sedang diproses, harap tunggu...", "warning");
         vibrateAlertShort();
@@ -1527,21 +1528,21 @@ async function submitAbsensiForm() {
     }
     isSubmitting = true;
 
-    const perangkatVal = $('#perangkatData').val()?.trim() || "";
+    const perangkatVal = $('#perangkatData').val() ? $('#perangkatData').val().trim() : "";
     const val = perangkatVal ? perangkatVal.split('|') : [];
 
-    // 🔐 Validasi Session
+    // Validasi Sesi
     if (!userData || val.length < 2 || !val[0] || !val[1]) {
         showPopup("Sesi login berakhir. Silakan login ulang.", "error");
         isSubmitting = false;
         return;
     }
 
-    const statusRaw = $('#status').val().trim();
+    const statusRaw = $('#status').val().trim(); 
     const status = statusRaw.toLowerCase();
     const keterangan = $('#keterangan').val().trim();
 
-    // 📋 Validasi Status
+    // Validasi Status
     if (!statusRaw) {
         showPopup("Silakan pilih status terlebih dahulu!", "warning");
         vibrateAlertShort();
@@ -1550,18 +1551,19 @@ async function submitAbsensiForm() {
         return;
     }
 
-    // 📝 Validasi Keterangan
+    // Validasi Keterangan (Izin/Sakit/Dinas)
     const ketWajib = ["izin", "sakit", "dinas"].includes(status);
     if (ketWajib && !keterangan) {
         showPopup("Keterangan wajib diisi untuk status " + statusRaw + "!", "warning");
         vibrateAlertShort();
-        document.getElementById('keterangan').focus();
+        const ketField = document.getElementById('keterangan');
+        ketField.focus();
         isSubmitting = false;
         return;
     }
 
-    // 📸 Validasi Foto
-    const wajibFoto = ["hadir", "dinas", "wfh"].includes(status);
+    // Validasi Foto (Hadir/Dinas)
+    const wajibFoto = ["hadir", "dinas", "WFH"].includes(status);
     if (wajibFoto && !fotoData) {
         showPopup("Foto Kehadiran wajib untuk status " + statusRaw + "!", "warning");
         vibrateAlertShort();
@@ -1569,25 +1571,21 @@ async function submitAbsensiForm() {
         return;
     }
 
-    // 🔥 SATU SUMBER GPS
-    const gpsFinal = fotoData?.gps || gpsData;
-
-    // 📍 Validasi GPS
+    // Validasi GPS (Kecuali Izin/Sakit)
     const gpsWajib = !["izin", "sakit"].includes(status);
     if (gpsWajib) {
-        if (!gpsFinal || (gpsFinal[0] === 0 && gpsFinal[1] === 0)) {
-            showPopup("GPS belum aktif atau tidak valid.", "error");
+        if ((gpsData[0] === 0 && gpsData[1] === 0) || (typeof animatingGPS !== 'undefined' && animatingGPS)) {
+            showPopup("GPS belum aktif atau sedang akurasi. Izinkan akses lokasi.", "error");
             vibrateAlertShort();
             isSubmitting = false;
             return;
         }
     }
 
-    // 📏 Validasi Radius (fungsi tetap sama, tapi pakai gpsFinal)
-    if (status === "hadir" || status === "wfh") {
-        const [lat, lon] = gpsFinal;
+    // Validasi Radius (Khusus Hadir)
+    if (status === "hadir"|| status === "WFH") {
+        const [lat, lon] = gpsData;
         const insideArea = checkUserLocation(lat, lon, statusRaw);
-
         if (!insideArea) {
             showPopup("⚠️ Anda berada di luar area absensi!", "error");
             vibrateAlertShort();
