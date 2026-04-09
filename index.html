@@ -1572,7 +1572,7 @@ async function submitAbsensiForm() {
     // 🔥 SATU SUMBER GPS
     const gpsFinal = fotoData?.gps || gpsData;
 
-    // 📍 Validasi GPS
+// 📍 Validasi GPS
     const gpsWajib = !["izin", "sakit"].includes(status);
     if (gpsWajib) {
         if (!gpsFinal || (gpsFinal[0] === 0 && gpsFinal[1] === 0)) {
@@ -1583,13 +1583,20 @@ async function submitAbsensiForm() {
         }
     }
 
-    // 📏 Validasi Radius (fungsi tetap sama, tapi pakai gpsFinal)
+    // 📏 Validasi Radius (BAGIAN YANG DIPERBAIKI)
     if (status === "hadir" || status === "wfh") {
+        if (!targetLocation) {
+            showPopup("⚠️ Koordinat kantor belum dimuat. Tunggu sebentar atau pilih ulang status.", "warning");
+            isSubmitting = false;
+            return;
+        }
+
         const [lat, lon] = gpsFinal;
-        const insideArea = checkUserLocation(lat, lon, statusRaw);
+        const distance = getDistanceFromLatLonInMeters(lat, lon, targetLocation.lat, targetLocation.lon);
+        const insideArea = distance <= RADIUS_LIMIT;
 
         if (!insideArea) {
-            showPopup("⚠️ Anda berada di luar area absensi!", "error");
+            showPopup(`⚠️ Anda berada di luar area absensi!<br>Jarak: ${distance.toFixed(0)}m (Max: ${RADIUS_LIMIT}m)`, "error");
             vibrateAlertShort();
             isSubmitting = false;
             return;
