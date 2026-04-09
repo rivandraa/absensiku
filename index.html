@@ -147,7 +147,7 @@ body.locked {
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Dinas">Dinas</option>
-                <option value="WFH" disabled hidden>WFH</option>
+                <option value="WFH">WFH</option>
             </select>
         </div>
 
@@ -489,23 +489,33 @@ async function loginUser() {
 
     showPopup("Memproses login...", "loading");
 
-    try {
-        // 1. Hashing password dilakukan secara lokal (cepat)
-        const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(password);
 
-        // 2. SATU KALI FETCH SAJA (Gunakan template literals agar rapi)
-        // Gunakan parameter timestamp (&_t=) untuk menghindari cache browser
-        const url = `${GAS_URL}?action=checkLogin&username=${encodeURIComponent(username)}&passwordHash=${encodeURIComponent(passwordHash)}&_t=${Date.now()}`;
-        
-        const webResponse = await fetch(url);
-        
-        if (!webResponse.ok) throw new Error("Network response was not ok");
-        
+    // Pengganti google.script.run
+    try {
+        const response = await fetch(GAS_URL, {
+            method: "POST", // Menggunakan POST agar aman mengirim hash
+            mode: "no-cors", // Penting untuk menghindari blokir CORS di GAS
+            body: JSON.stringify({
+                action: "checkLogin",
+                username: username,
+                passwordHash: passwordHash
+            })
+        });
+
+        /* CATATAN: Karena GAS menggunakan redirect, fetch dengan mode 'no-cors' 
+           tidak bisa membaca body response secara langsung. 
+           Solusi terbaik: Gunakan 'cors' (default) tapi pastikan GAS mengembalikan JSON yang benar.
+        */
+
+        // VERSI LEBIH STABIL UNTUK GITHUB PAGES:
+        const webResponse = await fetch(`${GAS_URL}?action=checkLogin&username=${username}&passwordHash=${passwordHash}`);
         const res = await webResponse.json();
 
         if (res && res.status !== "error") {
-            // ✅ LOGIN BERHASIL (Sisa kode Anda)
+            // ✅ Login berhasil
             userData = res;
+
             sessionStorage.setItem('userData', JSON.stringify(res));
             sessionStorage.setItem('page', 'absen');
 
@@ -519,26 +529,31 @@ async function loginUser() {
 
             if (res.koordinat) {
                 const parts = res.koordinat.split(",");
-                targetLocation = { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+                targetLocation = {
+                    lat: parseFloat(parts[0]),
+                    lon: parseFloat(parts[1])
+                };
                 lastTargetLocation = targetLocation;
+            } else {
+                targetLocation = null;
+                lastTargetLocation = null;
             }
             
-            showPopup("Login berhasil!", "success");
+            showPopup("Login berhasil! Selamat datang " + res.nama, "success");
 
-            setTimeout(() => {
-                startIdleTimer();
-                startGPS();
-                startWebcam();
-            }, 500);
+            startIdleTimer();
+            startGPS();
+            startWebcam();
             
         } else {
+            // Username/password salah atau error dari server
             const errMsg = res.message || "Username atau Password salah!";
             $('#alertLogin').html("⚠️ " + errMsg).show();
             showPopup(errMsg, "error");
         }
     } catch (error) {
         console.error("Connection Error:", error);
-        showPopup("⚠️ Gagal terhubung ke server.", "error", 5000);
+        showPopup("⚠️ Gagal terhubung ke server. Pastikan koneksi internet stabil.", "error", 5000);
     }
 }
 
@@ -587,6 +602,9 @@ async function isGPSEnabledUniversal() {
 // =====================================================
 // GPS STATE
 // =====================================================
+// =====================================================
+// GPS STATE
+// =====================================================
 let gpsWatcherId = null;
 let gpsMonitorInterval = null;
 let gpsLoadingInterval = null;
@@ -608,21 +626,17 @@ let fetchRequestId = 0;
 let targetLocation = null;
 let gpsSystemActive = false;
 const RADIUS_LIMIT = 30; // meter
-const MAX_ACCURACY = 50; // meter
 
 // =====================================================
 // START & STOP GPS
 // =====================================================
-function startGPS(onReady) {
-    gpsSystemActive = true
-
-    // 🔥 langsung nyalakan GPS dulu
-    startGPSMonitoring(onReady);
-
-    // 🔥 fetch belakangan (tidak blocking)
-    refreshTargetLocation(null, false);
+function startGPS() {
+    gpsSystemActive = true;
+    refreshTargetLocation(() => {
+        if (!gpsSystemActive) return;
+        startGPSMonitoring();
+    });
 }
-
 
 function stopGPSMonitoring() {
     gpsSystemActive = false;
@@ -659,7 +673,6 @@ function resetGPSState() {
     lastTargetLocation = null;
     isFetchingLocation = false;
 
-    // reset tampilan
     //updateGPSDisplay("Silakan tunggu...");
 }
 
@@ -710,11 +723,11 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
     
     // Jika akurasi masih buruk (saat animasi)
-    if (acc && acc > MAX_ACCURACY) {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n" +
+    if (acc && acc > 30) {
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n" +
                        "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
-        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n";
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > 30 Meter\n";
     }
 
     if ((status === "Hadir" || status === "WFH") && targetLocation) {
@@ -750,41 +763,37 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 // =====================================================
 let isFetchingLocation = false;
 
-// Tambahkan parameter 'isSilent' untuk membedakan interval dan manual
-async function refreshTargetLocation(callback, isSilent = false) {
-    const userObj = userData || JSON.parse(sessionStorage.getItem('userData'));
-    const userRequesting = userObj ? userObj.username : null;
-    if (!userRequesting) return;
+async function refreshTargetLocation(callback) {
+    const userRequesting = (userData && userData.username) ? userData.username : null;
+    if (!userRequesting) {
+        if (typeof callback === "function") callback();
+        return;
+    }
 
     const statusInput = document.getElementById("status");
     const currentStatus = statusInput ? statusInput.value : "";
     const tampil = document.getElementById("titikKoordinatTampil");
     const hidden = document.getElementById("titikKoordinat");
 
-    // =========================================================
-    // LOGIKA ANTI-KEDIP (Hanya reset jika BUKAN dari interval)
-    // =========================================================
-    if (!isSilent) {
-        targetLocation = null; 
-        if (tampil) tampil.value = "Sedang mengambil data...";
-        if (hidden) hidden.value = "";
-    }
-    // =========================================================
-
-    if (!currentStatus || currentStatus === "Pilih Status...") {
-        if (tampil) tampil.value = "⚠️ Pilih Status";
-        return;
-    }
-    
-    // Jika status non-lokasi, langsung set dan berhenti
+    // 1. Jika Status Khusus, Langsung Eksekusi & Berhenti
     if (["Dinas", "Izin", "Sakit"].includes(currentStatus)) {
-        if (tampil) tampil.value = "-";
-        if (hidden) hidden.value = "-";
         targetLocation = null;
         lastTargetLocation = null;
+        if (tampil) tampil.value = "-";
+        if (hidden) hidden.value = "-";
+        if (typeof forceUpdateDistanceUI === "function") forceUpdateDistanceUI();
+        if (typeof callback === "function") callback();
         return; 
     }
 
+    if (!currentStatus || currentStatus === "Pilih Status...") {
+        if (tampil) tampil.value = "⚠️ Pilih Status";
+        targetLocation = null;
+        if (typeof callback === "function") callback();
+        return;
+    }
+
+    // 2. Cegah Double Request tapi tetap izinkan proses
     if (isFetchingLocation) return;
 
     try {
@@ -793,17 +802,20 @@ async function refreshTargetLocation(callback, isSilent = false) {
         const response = await fetch(url);
         const loc = await response.json();
 
-        // Validasi agar data yang telat tidak menimpa status yang sudah berubah
-        if (document.getElementById("status")?.value !== currentStatus) return;
+        // --- KUNCI ANTI LAMBAT & ANTI KEDIP ---
+        // Cek lagi status saat ini. Jika user sudah pindah ke Dinas/Izin/Sakit
+        // saat data ini baru datang, maka JANGAN update UI.
+        const latestStatus = document.getElementById("status")?.value;
+        if (["Dinas", "Izin", "Sakit"].includes(latestStatus)) {
+            isFetchingLocation = false; // Reset flag
+            return; 
+        }
 
         if (loc && loc.lat && loc.lon) {
             const newLocation = { lat: parseFloat(loc.lat), lon: parseFloat(loc.lon) };
-            
-            // Update memori
             targetLocation = newLocation;
             lastTargetLocation = newLocation;
 
-            // Update Tampilan (Tanpa kedip karena isSilent menangani ini)
             const koordinatMurni = `${newLocation.lat.toFixed(6)}, ${newLocation.lon.toFixed(6)}`;
             if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
@@ -814,7 +826,7 @@ async function refreshTargetLocation(callback, isSilent = false) {
             if (tampil) tampil.value = "Titik tidak ditemukan";
         }
     } catch (error) {
-        console.error("Gagal refresh:", error);
+        console.error("Gagal mengambil lokasi:", error);
     } finally {
         isFetchingLocation = false;
         if (typeof callback === "function") callback();
@@ -839,11 +851,9 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
 // =====================================================
 // MONITORING & WATCHER
 // =====================================================
-function startGPSMonitoring(onReady) {
+function startGPSMonitoring() {
     const gpsDiv = document.getElementById("gps");
     if (!gpsDiv) return;
-
-    let firstFix = false; // 🔥 PENANDA GPS SIAP
 
     gpsData = [0, 0];
     lastInsideArea = null;
@@ -854,8 +864,6 @@ function startGPSMonitoring(onReady) {
     if (!navigator.geolocation) {
         stopGPSLoading();
         updateGPSDisplay("⚠️ GPS tidak tersedia");
-
-        if (typeof onReady === "function") onReady(); // 🔥 fallback
         return;
     }
 
@@ -871,13 +879,10 @@ function startGPSMonitoring(onReady) {
             if (accAnim) { clearInterval(accAnim); accAnim = null; }
             gpsData = [0, 0];
             updateGPSDisplay("⚠️ GPS tidak aktif atau sinyal hilang.");
-
             if (!gpsErrorActive) {
                 gpsErrorActive = true;
                 showPopup("⚠️ Periksa GPS Anda.", "error", false);
             }
-
-            if (typeof onReady === "function") onReady(); // 🔥 biar tombol tidak nyangkut
             return;
         }
 
@@ -886,7 +891,7 @@ function startGPSMonitoring(onReady) {
             gpsErrorActive = false;
             forceClosePopup();
             startGPSLoading();
-            startWatch();
+            setTimeout(() => startWatch(), 1000);
         }
     }
 
@@ -899,17 +904,7 @@ function startGPSMonitoring(onReady) {
                 const lat = pos.coords.latitude;
                 const lon = pos.coords.longitude;
                 const acc = pos.coords.accuracy;
-
                 stopGPSLoading();
-
-                // 🔥 FIRST FIX (INI KUNCI)
-                if (!firstFix) {
-                    firstFix = true;
-
-                    if (typeof onReady === "function") {
-                        onReady(); // tombol aktif lagi di sini
-                    }
-                }
 
                 if (acc > 30) {
                     gpsData = [lat, lon];
@@ -917,6 +912,7 @@ function startGPSMonitoring(onReady) {
                 } else {
                     stopAccAnim();
                     gpsData = [lat, lon];
+                    // INSTAN: Update UI segera saat koordinat masuk
                     forceUpdateDistanceUI(lat, lon, acc);
                 }
 
@@ -930,8 +926,6 @@ function startGPSMonitoring(onReady) {
                 gpsData = [0, 0];
                 stopGPSLoading();
                 updateGPSDisplay("⚠️ Sinyal GPS hilang.");
-
-                if (typeof onReady === "function") onReady(); // 🔥 fallback
             },
             { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
         );
@@ -958,8 +952,8 @@ function startGPSMonitoring(onReady) {
         gpsMonitorInterval = setInterval(() => {
             if (!gpsSystemActive) return; // cek setiap 5 detik
             handleGPS();
-            refreshTargetLocation(null, true);
-        }, 3000);
+            refreshTargetLocation();
+        }, 5000);
     }
 }
 
@@ -970,31 +964,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (statusEl) {
         statusEl.addEventListener("change", () => {
+            // 1. Matikan sistem yang berjalan saat ini
+       //     gpsSystemActive = false;
+       //     stopGPSMonitoring(); 
+
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
-            refreshTargetLocation(null, false);
+            refreshTargetLocation();
+
+            // 3. Beri jeda 500ms sebelum menghidupkan kembali
+        //    setTimeout(() => {
+            //    gpsSystemActive = true;
+                // Panggil startGPS() saja, karena di dalam startGPS 
+                // sudah ada perintah gpsSystemActive = true
+           //     startGPSMonitoring(); 
+           // }, 200);
         });
     }
     
     // === restart gps ===
-	if (restartBtn) {
-	    restartBtn.addEventListener("click", () => {
-	        gpsSystemActive = false;
-	        stopGPSMonitoring();
-	
-	        restartBtn.innerHTML = "⏳ Sedang Restart...";
-	        restartBtn.disabled = true;
-	        startGPS(() => {
-	            restartBtn.innerHTML = "🔄 Restart GPS";
-	            restartBtn.disabled = false;
-	
-	            if (typeof showPopup === "function") {
-	                showPopup("GPS berhasil di-restart.", "success", 5000);
-	            	}
-	        	});
-	    	});
-		}
-	});
-	
+    if (restartBtn) {
+        restartBtn.addEventListener("click", () => {
+            gpsSystemActive = false;
+            stopGPSMonitoring();
+            
+            restartBtn.innerHTML = "⏳ Mengatur Ulang...";
+            restartBtn.disabled = true;
+
+            setTimeout(() => {
+                gpsSystemActive = true;
+                restartBtn.innerHTML = "🔄 Restart GPS";
+                restartBtn.disabled = false;
+                startGPS();
+                
+                if (typeof showPopup === "function") {
+                    showPopup("GPS akan segera di restart, silakan tunggu.", "success", 5000);
+                }
+            }, 500);
+        });
+    }
+});
+
 /* =========================================================================================================
     BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REDESAIN + ERROR MAPPING)
     - Live view: mirror (selfie) di video saja
@@ -1192,54 +1201,30 @@ document.getElementById('snap').addEventListener('click', async () => {
   // 3. PROSES PENGAMBILAN GAMBAR
   showPopup("Mengambil foto...", "loading");
   
-	try {
-	    const canvas = document.createElement("canvas");
-	    canvas.width = video.videoWidth;
-	    canvas.height = video.videoHeight;
-	    const ctx = canvas.getContext("2d");
-	    
-	    // 1. Ambil gambar murni dari video
-	    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-	    const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
-	
-	    // =====================================================
-	    // 🔥 TAMBAHAN: SIMPAN & TAMPILKAN PREVIEW
-	    // =====================================================
-	    const fotoPreview = document.getElementById("fotoPreview");
-	    if (fotoPreview) {
-	        fotoPreview.src = fotoMurni;
-	        fotoPreview.style.display = "block";
-	    }
-	
-	    // Freeze kamera (opsional tapi disarankan)
-	    if (video) video.style.display = "none";
-	    // stopWebcam(); // aktifkan kalau mau kamera benar-benar mati
-	
-	    // =====================================================
-	    // LANJUT PROSES
-	    // =====================================================
-	
-	    showPopup("Sinkronisasi waktu server...", "loading");
-	
-	    // 2. Sinkronisasi Waktu Server
-	    const response = await fetch(`${GAS_URL}?action=getServerTime`);
-	    const serverTime = await response.json();
-	
-	    // Persiapan Variabel untuk Watermark
-	    const statusEl = document.getElementById("status");
-		const labelStatus = statusEl && statusEl.value ? statusEl.value.toUpperCase() : "";
-		const ketElement = document.getElementById("keterangan");
-		const keteranganUser = ketElement ? ketElement.value.trim() : "";
-		const finalKeterangan = keteranganUser ? keteranganUser : "-";
-	    const jamTampil = serverTime.waktu + " WITA";
-	    const tanggalServer = serverTime.tanggal;
-	    const hariServer = serverTime.hari;
-	    const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
-
-		gpsSaatFoto = [...gpsData];
-	
-	    const img = new Image();
-	    img.src = fotoMurni;
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        
+        // 1. Ambil gambar murni dari video
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const fotoMurni = canvas.toDataURL("image/jpeg", 0.85);
+    
+        // 2. Sinkronisasi Waktu Server (Tetap pakai fetch sesuai kode Anda)
+        const response = await fetch(`${GAS_URL}?action=getServerTime`);
+        const serverTime = await response.json();
+    
+        // Persiapan Variabel untuk Watermark
+        const labelStatus = document.getElementById("status") ? document.getElementById("status").value : "";
+        const finalKeterangan = ""; // Kosongkan jika tidak ada input keterangan
+        const jamTampil = serverTime.waktu + " WITA";
+        const tanggalServer = serverTime.tanggal;
+        const hariServer = serverTime.hari;
+        const gpsText = `${gpsData[0]}, ${gpsData[1]}`;
+        const gpsSaatFoto = [...gpsData];
+    
+        const img = new Image();
         img.onload = function () {
             const ctx2 = canvas.getContext("2d");
             ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -1373,7 +1358,6 @@ document.getElementById('snap').addEventListener('click', async () => {
             fotoData = {
                 name: `${userData?.nama || "user"}_${serverTime.full.replace(/[: ]/g, "_")}.jpeg`,
                 base64: finalFoto.split(",")[1],
-				type: "image/jpeg",
                 gps: gpsSaatFoto,
                 waktu: serverTime.iso
             };
