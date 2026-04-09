@@ -1610,7 +1610,7 @@ async function submitAbsensiForm() {
 
     if (!["izin", "sakit"].includes(status)) {
         payload.foto = fotoData; // Ini berisi {base64, name, type, dll}
-        payload.gps = gpsFinal;
+        payload.gps = gpsSaatFoto;
     }
 
     // Kunci UI
@@ -1662,6 +1662,7 @@ async function submitAbsensiForm() {
         vibrateAlertLong();
     }
 }
+
 
 // =========================================================================================================
 // FUNGSI PEMBANTU: FORMAT TANGGAL & WAKTU (INDONESIA)
