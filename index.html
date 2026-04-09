@@ -1713,11 +1713,14 @@ async function showLaporan_Absensi() {
         // Kerangka HTML Laporan (Sesuai aslinya, tapi dipindah ke sini)
         const html = `
             <div class="container mt-3">
-				<div class="position-relative d-flex align-items-center justify-content-center mb-3" style="min-height: 40px;">
-				    <h6 id="kopLaporan" class="fw-bold mb-0 text-uppercase text-center w-100">
+				<div class="d-flex align-items-center justify-content-between mb-3">
+				    <div style="width: 80px; visibility: hidden;" class="btn btn-sm">
+				        <i class="fas fa-times"></i> Tutup
+				    </div>
+				    <h6 id="kopLaporan" class="fw-bold mb-0 text-uppercase text-center flex-grow-1">
 				        LAPORAN ABSENSI
 				    </h6>
-				    <button id="homeBtn" class="btn btn-sm btn-danger position-absolute end-0">
+				    <button id="homeBtn" class="btn btn-sm btn-danger" style="width: 80px;">
 				        <i class="fas fa-times"></i> Tutup
 				    </button>
 				</div>
