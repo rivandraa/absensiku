@@ -145,7 +145,7 @@ body.locked {
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Dinas">Dinas</option>
-                <option value="WFH" disabled hidden>WFH</option>
+                <option value="WFH">WFH</option>
             </select>
         </div>
 
@@ -827,7 +827,9 @@ async function refreshTargetLocation(callback, isSilent = false) {
             if (tampil) tampil.value = (loc.nama && loc.nama.trim() !== "") ? loc.nama : koordinatMurni;
             if (hidden) hidden.value = koordinatMurni;
 
-            if (gpsData[0] !== 0) forceUpdateDistanceUI();
+            if (gpsData[0] !== 0) {
+            forceUpdateDistanceUI(gpsData[0], gpsData[1], null);
+			}
         } else {
             targetLocation = null;
             if (tampil) tampil.value = "Titik tidak ditemukan";
@@ -991,7 +993,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) {
         statusEl.addEventListener("change", () => {
             // 2. Refresh data target (untuk memproses tanda "-" atau koordinat baru)
+            //updateGPSDisplay("Menghitung jarak ke lokasi baru...");
+            
+            // Panggil refresh target
             refreshTargetLocation(null, false);
+            
+            // Jika GPS sudah aktif, paksa hitung ulang dengan target null dulu (untuk reset tombol kamera)
+            if (gpsData[0] !== 0) {
+                forceUpdateDistanceUI(gpsData[0], gpsData[1], null);
+            }
         });
     }
     
@@ -1434,6 +1444,7 @@ document.getElementById('snap').addEventListener('click', async () => {
     }
 });
 
+
 /* =========================================================================================================
 Fungsi untuk menyembunyikan, lokasi dan kamera
 ========================================================================================================= */
@@ -1561,7 +1572,7 @@ async function submitAbsensiForm() {
     // 🔥 SATU SUMBER GPS
     const gpsFinal = fotoData?.gps || gpsData;
 
-// 📍 Validasi GPS
+    // 📍 Validasi GPS
     const gpsWajib = !["izin", "sakit"].includes(status);
     if (gpsWajib) {
         if (!gpsFinal || (gpsFinal[0] === 0 && gpsFinal[1] === 0)) {
@@ -1572,20 +1583,13 @@ async function submitAbsensiForm() {
         }
     }
 
-    // 📏 Validasi Radius (BAGIAN YANG DIPERBAIKI)
+    // 📏 Validasi Radius (fungsi tetap sama, tapi pakai gpsFinal)
     if (status === "hadir" || status === "wfh") {
-        if (!targetLocation) {
-            showPopup("⚠️ Koordinat kantor belum dimuat. Tunggu sebentar atau pilih ulang status.", "warning");
-            isSubmitting = false;
-            return;
-        }
-
         const [lat, lon] = gpsFinal;
-        const distance = getDistanceFromLatLonInMeters(lat, lon, targetLocation.lat, targetLocation.lon);
-        const insideArea = distance <= RADIUS_LIMIT;
+        const insideArea = checkUserLocation(lat, lon, statusRaw);
 
         if (!insideArea) {
-            showPopup(`⚠️ Anda berada di luar area absensi!<br>Jarak: ${distance.toFixed(0)}m (Max: ${RADIUS_LIMIT}m)`, "error");
+            showPopup("⚠️ Anda berada di luar area absensi!", "error");
             vibrateAlertShort();
             isSubmitting = false;
             return;
