@@ -748,13 +748,9 @@ function forceUpdateDistanceUI(lat, lon, acc) {
         }
     }  
     else if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        displayText += `-`;
+        displayText += ``;
         lastInsideArea = true;
     }  
-    else {
-        displayText += `⚠️ Pilih Status Absen`;
-        lastInsideArea = false;
-    }
 
     // Update tampilan utama
     updateGPSDisplay(displayText);
@@ -787,7 +783,7 @@ async function refreshTargetLocation(callback, isSilent = false) {
     // =========================================================
 
     if (!currentStatus || currentStatus === "Pilih Status...") {
-        if (tampil) tampil.value = "⚠️ Pilih Status";
+        if (tampil) tampil.value = "⚠️ Status Absen belum dipilih.";
         return;
     }
     
