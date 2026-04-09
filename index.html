@@ -717,37 +717,28 @@ function forceUpdateDistanceUI(lat, lon, acc) {
 
     if (currentLat === 0) return;
 
-    let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
+    let displayText = "Lokasi Anda : " + currentLat.toFixed(6) + "," + currentLon.toFixed(6) + "\n";
     
     // Jika akurasi masih buruk (saat animasi)
     if (acc && acc > MAX_ACCURACY) {
-        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n` +
-               `Sedang meningkatkan akurasi${".".repeat(accDots)}\n`;
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n" +
+                       "Sedang meningkatkan akurasi" + ".".repeat(accDots);
     } else {
-        displayText += `Tingkat Akurasi : ${acc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n`;
+        displayText += "Tingkat Akurasi : " + acc.toFixed(0) + " Meter | > ${MAX_ACCURACY} Meter\n";
     }
 
-// 2. Logika Baris Ketiga (Jarak / Status)
-    if (status === "Hadir" || status === "WFH") {
-        if (targetLocation) {
-            // Jika data target sudah siap, hitung jarak
+    if ((status === "Hadir" || status === "WFH") && targetLocation) {
             const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
             const insideArea = distance <= RADIUS_LIMIT;
+            
+            // Update global state secara instan
             lastInsideArea = insideArea;
-
+    
+            // Langsung tampilkan status area berdasarkan hasil hitung jarak
             displayText += insideArea
-                ? `✅ Berada dalam area radius`
-                : `❌ Di luar area\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT}m)`;
-        } else {
-            // 🔥 TAMPILAN SAAT SEDANG FETCH DATA KANTOR
-            displayText += `\nMenghitung jarak ke lokasi baru...`;
-            lastInsideArea = false; // Kunci tombol kamera dulu
+                ? `\n✅ Berada dalam area/radius ${namaLokasi}`
+                : `\n❌ Di luar area dari Titik Koordinat Absensi\n📏 Jarak ${distance.toFixed(0)} Meter (Max. ${RADIUS_LIMIT} Meter)`;
         }
-    } else {
-        // Status Dinas/Izin/Sakit
-        displayText += `\n-`;
-        lastInsideArea = true;
-    }
 
     updateGPSDisplay(displayText);
 
