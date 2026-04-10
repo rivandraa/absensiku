@@ -1844,7 +1844,7 @@ function closeLaporan_Absensi() {
 /**
  * TESSSS
  */
-	async function showRiwayatUI() {
+async function showRiwayatUI() {
     showPopup("Memuat riwayat...", "loading");
 
     const html = `
@@ -1854,7 +1854,6 @@ function closeLaporan_Absensi() {
 
         <div class="card p-3 shadow-sm rounded-4">
             <h5 class="mb-3">Riwayat Presensi</h5>
-
             <div id="calendar"></div>
         </div>
 
@@ -1884,45 +1883,100 @@ function closeLaporan_Absensi() {
     await loadRiwayatData();
 }
 
+	async function loadRiwayatData() {
+    try {
+        const url = `${GAS_URL}?action=getRiwayat&username=${userData.username}&_t=${Date.now()}`;
+        const res = await fetch(url);
+
+        if (!res.ok) throw new Error("Gagal koneksi");
+
+        const data = await res.json();
+
+        console.log("DATA RIWAYAT:", data);
+
+        if (!Array.isArray(data)) {
+            showPopup("Format data salah dari server", "error");
+            return;
+        }
+
+        renderCalendar(data);
+        renderTimeline(data);
+        renderSummary(data);
+
+        showPopup("Riwayat berhasil dimuat", "success", 1000);
+
+    } catch (err) {
+        console.error(err);
+        showPopup("Gagal mengambil data riwayat", "error");
+    }
+}
+
 	function renderCalendar(data) {
     const container = document.getElementById("calendar");
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
     let html = '<div class="calendar-grid">';
 
-    for (let i = 1; i <= 30; i++) {
-        const item = data.find(d => d.tanggal == i);
+    for (let i = 1; i <= daysInMonth; i++) {
+        const item = data.find(d => parseInt(d.tanggal) === i);
 
         let className = "day";
 
         if (item) {
             if (item.status === "Hadir") className += " hadir";
-            if (item.status === "Izin") className += " izin";
+            else if (item.status === "Izin") className += " izin";
+            else if (item.status === "Sakit") className += " sakit";
+            else if (item.status === "Dinas") className += " dinas";
         }
 
         html += `<div class="${className}">${i}</div>`;
     }
 
     html += "</div>";
-
     container.innerHTML = html;
 }
 
-function renderTimeline(data) {
+	function renderTimeline(data) {
     const el = document.getElementById("timeline");
 
     let html = "";
 
-    data.reverse().forEach(item => {
+    data.slice().reverse().forEach(item => {
         html += `
         <div class="card p-2 mb-2 shadow-sm">
             <b>${item.tanggal}</b><br>
-            ${item.keterangan}
+            ${item.status} - ${item.keterangan || "-"}
         </div>
         `;
     });
 
     el.innerHTML = html;
 }
+
+	function renderSummary(data) {
+    let hadir = 0, tidak = 0, kegiatan = 0;
+
+    data.forEach(item => {
+        if (item.status === "Hadir") hadir++;
+        else if (["Izin", "Sakit"].includes(item.status)) tidak++;
+        else if (item.status === "Dinas") kegiatan++;
+    });
+
+    document.getElementById("totalHadir").innerText = hadir;
+    document.getElementById("totalTidak").innerText = tidak;
+    document.getElementById("totalKegiatan").innerText = kegiatan;
+}
+
+	function closeRiwayat() {
+    $('#InnerPage').hide().html('');
+    $('#AbsensiPage').show();
+}
+
 
 /* =========================================================================================================
     BAGIAN KODE PENGATURAN PASSWORD
