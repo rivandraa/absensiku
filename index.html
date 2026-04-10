@@ -1844,6 +1844,9 @@ function closeLaporan_Absensi() {
 /**
  * TESSSS
  */
+// ===============================
+// RIWAYAT UI
+// ===============================
 async function showRiwayatUI() {
     showPopup("Memuat riwayat...", "loading");
 
@@ -1883,19 +1886,32 @@ async function showRiwayatUI() {
     await loadRiwayatData();
 }
 
-	async function loadRiwayatData() {
+
+// ===============================
+// LOAD DATA (SUDAH FIX FORMAT)
+// ===============================
+async function loadRiwayatData() {
     try {
-        const url = `${GAS_URL}?action=getRiwayat&username=${userData.username}&_t=${Date.now()}`;
+        const url = `${GAS_URL}?action=getRiwayat&username=${userData.username}&spreadsheetId=${userData.spreadsheetId}&_t=${Date.now()}`;
         const res = await fetch(url);
 
         if (!res.ok) throw new Error("Gagal koneksi");
 
-        const data = await res.json();
+        const json = await res.json();
 
-        console.log("DATA RIWAYAT:", data);
+        console.log("DATA RIWAYAT:", json);
+
+        // 🔥 HANDLE SEMUA FORMAT RESPONSE
+        if (json.status === "error") {
+            showPopup(json.message || "Error dari server", "error");
+            return;
+        }
+
+        const data = Array.isArray(json) ? json : json.data;
 
         if (!Array.isArray(data)) {
-            showPopup("Format data salah dari server", "error");
+            showPopup("Format data tidak dikenali", "error");
+            console.log(json);
             return;
         }
 
@@ -1911,7 +1927,11 @@ async function showRiwayatUI() {
     }
 }
 
-	function renderCalendar(data) {
+
+// ===============================
+// CALENDAR
+// ===============================
+function renderCalendar(data) {
     const container = document.getElementById("calendar");
 
     const now = new Date();
@@ -1941,7 +1961,11 @@ async function showRiwayatUI() {
     container.innerHTML = html;
 }
 
-	function renderTimeline(data) {
+
+// ===============================
+// TIMELINE
+// ===============================
+function renderTimeline(data) {
     const el = document.getElementById("timeline");
 
     let html = "";
@@ -1958,7 +1982,11 @@ async function showRiwayatUI() {
     el.innerHTML = html;
 }
 
-	function renderSummary(data) {
+
+// ===============================
+// SUMMARY
+// ===============================
+function renderSummary(data) {
     let hadir = 0, tidak = 0, kegiatan = 0;
 
     data.forEach(item => {
@@ -1972,10 +2000,15 @@ async function showRiwayatUI() {
     document.getElementById("totalKegiatan").innerText = kegiatan;
 }
 
-	function closeRiwayat() {
+
+// ===============================
+// BACK BUTTON
+// ===============================
+function closeRiwayat() {
     $('#InnerPage').hide().html('');
     $('#AbsensiPage').show();
 }
+
 
 
 /* =========================================================================================================
