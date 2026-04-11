@@ -342,7 +342,7 @@ updateTanggalWaktu();
  * @param {function|null} callback - Fungsi yang dijalankan setelah popup tertutup
  */
 // ================================
-// Popup Notifikasi dan Getar
+// Popup Notifikasi dan Getar (Improved)
 // ================================
 let popupActive = false;
 
@@ -351,52 +351,75 @@ let popupActive = false;
  */
 function showPopup(msg, type = "success", duration = null, callback = null) {
     const popup = document.getElementById("popupNotif");
+    if (!popup) return;
 
-    // Bersihkan timeout lama
-    if (popup._timeout) {
-        clearTimeout(popup._timeout);
-        popup._timeout = null;
-    }
+    // 1. Hentikan semua animasi/timeout yang sedang berjalan
+    clearTimeout(popup._timeout);
+    clearTimeout(popup._hideTimeout);
+    popup._timeout = null;
+    popup._hideTimeout = null;
 
-    // Reset class
-    popup.className = "";
-    popup.classList.add(type, "show");
-    popup.style.display = "block"; // pakai CSS asli Anda
-    popupActive = true;
+    // 2. Reset State: Hapus class lama tanpa animasi agar transisi baru bersih
+    popup.classList.remove("show", "success", "warning", "error", "loading");
+    popup.style.display = "block"; 
+    
+    // Force reflow agar browser sadar class sudah dihapus sebelum ditambah lagi
+    void popup.offsetWidth; 
 
-    // Konten popup
+    // 3. Set Konten & Tipe Baru
+    popup.classList.add(type);
     if (type === "loading") {
-        popup.innerHTML = '<div class="spinner"></div><div style="margin-top:8px;">' + msg + '</div>';
-        return; // loading tidak auto-close
+        popup.innerHTML = `<div class="spinner"></div><div style="margin-top:8px;">${msg}</div>`;
     } else {
         popup.innerHTML = msg;
     }
 
-    // Jika duration = false → jangan auto-close
-    if (duration === false) return;
+    // 4. Munculkan dengan sedikit delay agar transisi CSS 'show' berjalan mulus
+    requestAnimationFrame(() => {
+        popup.classList.add("show");
+        popupActive = true;
+    });
 
-    // Default duration
-    if (duration === null) duration = 3000;
+    // 5. Logika Auto-Close
+    if (type === "loading" || duration === false) return;
 
-    // Auto-close popup
+    const actualDuration = duration === null ? 3000 : duration;
+
     popup._timeout = setTimeout(() => {
-        popup.classList.remove("show");
-        setTimeout(() => {
-            popup.style.display = "none";
-            popupActive = false;
-            if (callback) callback();
-        }, 400); // sesuai transition CSS asli
-    }, duration);
+        closePopupLogic(popup, callback);
+    }, actualDuration);
 }
 
 /**
- * Popup sementara / warning saat loading aktif
+ * Logika internal untuk menutup popup dengan transisi
  */
-function showTempPopup(msg, type = "warning", duration = 1000) {
-    const temp = document.createElement("div");
-    temp.className = "popup-temp " + type;
-    temp.innerHTML = msg;
+function closePopupLogic(popup, callback) {
+    popup.classList.remove("show");
+    
+    // Simpan reference timeout untuk pembersihan nanti
+    popup._hideTimeout = setTimeout(() => {
+        popup.style.display = "none";
+        popup.classList.remove("success", "warning", "error", "loading");
+        popupActive = false;
+        if (typeof callback === "function") callback();
+    }, 400); // Harus sesuai dengan durasi transition di CSS
+}
 
+/**
+ * Menutup popup utama secara paksa
+ */
+function forceClosePopup() {
+    const popup = document.getElementById("popupNotif");
+    if (popup) closePopupLogic(popup);
+}
+
+/**
+ * Popup sementara (Helper tetap sama)
+ */
+function showTempPopup(msg, type = "warning", duration = 1500) {
+    const temp = document.createElement("div");
+    temp.className = `popup-temp ${type}`;
+    temp.innerHTML = msg;
     document.body.appendChild(temp);
 
     requestAnimationFrame(() => temp.classList.add("show"));
@@ -405,24 +428,6 @@ function showTempPopup(msg, type = "warning", duration = 1000) {
         temp.classList.remove("show");
         setTimeout(() => temp.remove(), 400);
     }, duration);
-}
-
-/**
- * Menutup popup utama (#popupNotif) secara paksa
- */
-function forceClosePopup() {
-    const popup = document.getElementById("popupNotif");
-
-    if (popup._timeout) {
-        clearTimeout(popup._timeout);
-        popup._timeout = null;
-    }
-
-    popup.classList.remove("show");
-    setTimeout(() => {
-        popup.style.display = "none";
-        popupActive = false;
-    }, 400);
 }
 
 /**
