@@ -342,31 +342,26 @@ updateTanggalWaktu();
  * @param {function|null} callback - Fungsi yang dijalankan setelah popup tertutup
  */
 // ================================
-// Popup Notifikasi dan Getar (Improved)
+// Popup Notifikasi dan Getar (Sync with CSS)
 // ================================
 let popupActive = false;
 
-/**
- * Menampilkan popup utama (#popupNotif)
- */
 function showPopup(msg, type = "success", duration = null, callback = null) {
     const popup = document.getElementById("popupNotif");
     if (!popup) return;
 
-    // 1. Hentikan semua animasi/timeout yang sedang berjalan
-    clearTimeout(popup._timeout);
-    clearTimeout(popup._hideTimeout);
-    popup._timeout = null;
-    popup._hideTimeout = null;
+    // 1. Bersihkan semua timeout aktif agar tidak tumpang tindih
+    if (popup._timeout) clearTimeout(popup._timeout);
+    if (popup._hideTimeout) clearTimeout(popup._hideTimeout);
 
-    // 2. Reset State: Hapus class lama tanpa animasi agar transisi baru bersih
-    popup.classList.remove("show", "success", "warning", "error", "loading");
-    popup.style.display = "block"; 
+    // 2. Reset keadaan (Remove show & types)
+    // Kita tidak pakai display: block/none karena CSS sudah pakai visibility
+    popup.classList.remove("show", "success", "error", "warning", "loading");
     
-    // Force reflow agar browser sadar class sudah dihapus sebelum ditambah lagi
-    void popup.offsetWidth; 
+    // Trigger reflow agar browser sadar ada reset class (penting untuk Safari/iOS)
+    void popup.offsetWidth;
 
-    // 3. Set Konten & Tipe Baru
+    // 3. Set Konten & Tipe
     popup.classList.add(type);
     if (type === "loading") {
         popup.innerHTML = `<div class="spinner"></div><div style="margin-top:8px;">${msg}</div>`;
@@ -374,11 +369,9 @@ function showPopup(msg, type = "success", duration = null, callback = null) {
         popup.innerHTML = msg;
     }
 
-    // 4. Munculkan dengan sedikit delay agar transisi CSS 'show' berjalan mulus
-    requestAnimationFrame(() => {
-        popup.classList.add("show");
-        popupActive = true;
-    });
+    // 4. Munculkan Popup
+    popup.classList.add("show");
+    popupActive = true;
 
     // 5. Logika Auto-Close
     if (type === "loading" || duration === false) return;
@@ -386,35 +379,33 @@ function showPopup(msg, type = "success", duration = null, callback = null) {
     const actualDuration = duration === null ? 3000 : duration;
 
     popup._timeout = setTimeout(() => {
-        closePopupLogic(popup, callback);
+        closePopupProcess(popup, callback);
     }, actualDuration);
 }
 
 /**
- * Logika internal untuk menutup popup dengan transisi
+ * Fungsi internal untuk handle proses penutupan sesuai durasi transisi CSS
  */
-function closePopupLogic(popup, callback) {
+function closePopupProcess(popup, callback) {
     popup.classList.remove("show");
     
-    // Simpan reference timeout untuk pembersihan nanti
+    // Tunggu transisi CSS selesai (0.4s atau 400ms) sebelum reset status
     popup._hideTimeout = setTimeout(() => {
-        popup.style.display = "none";
-        popup.classList.remove("success", "warning", "error", "loading");
         popupActive = false;
         if (typeof callback === "function") callback();
-    }, 400); // Harus sesuai dengan durasi transition di CSS
+    }, 400); 
 }
 
 /**
- * Menutup popup utama secara paksa
+ * Menutup popup utama secara paksa (misal saat proses selesai)
  */
 function forceClosePopup() {
     const popup = document.getElementById("popupNotif");
-    if (popup) closePopupLogic(popup);
+    if (popup) closePopupProcess(popup);
 }
 
 /**
- * Popup sementara (Helper tetap sama)
+ * Popup sementara (Sudah sinkron dengan class .popup-temp)
  */
 function showTempPopup(msg, type = "warning", duration = 1500) {
     const temp = document.createElement("div");
@@ -422,13 +413,18 @@ function showTempPopup(msg, type = "warning", duration = 1500) {
     temp.innerHTML = msg;
     document.body.appendChild(temp);
 
-    requestAnimationFrame(() => temp.classList.add("show"));
+    // Jalankan animasi masuk
+    requestAnimationFrame(() => {
+        temp.classList.add("show");
+    });
 
+    // Hapus otomatis
     setTimeout(() => {
         temp.classList.remove("show");
         setTimeout(() => temp.remove(), 400);
     }, duration);
 }
+
 
 /**
  * Fungsi Getar Pendek (warning / error)
