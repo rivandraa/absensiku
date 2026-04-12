@@ -740,14 +740,14 @@ else if (status === "Hadir" || status === "WFH") {
             displayText += insideArea
                 ? `✅ Berada dalam area/radius ${namaLokasi}`
                 : `❌ Di luar area | 📏 Jarak ${distance.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`;
-        } else {
-            // JIKA KOSONG ATAU "-", CEK DISINI
-            const isiKordinat = (elNama && elNama.value) ? elNama.value : "";
-            
-            if (isiKordinat !== "-" && isiKordinat !== "") {
-                displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
-            }
-            
+        } 
+        else if (isFetchingLocation) {
+            // Langsung tampilkan ini jika proses fetch sedang berjalan
+            displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
+            lastInsideArea = false;
+        }
+        else {
+            // Jika tidak sedang fetch DAN targetLocation kosong, langsung diam (tanpa teks tunggu)
             lastInsideArea = false;
         }
     }
