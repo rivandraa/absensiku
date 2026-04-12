@@ -1518,15 +1518,9 @@ async function submitAbsensiForm() {
         return;
     }
 
-	// 1. Ambil elemen status
-	const statusInput = document.getElementById("status");
-	// 2. Ambil nilainya, jika ada lakukan trim, jika tidak ada berikan string kosong
-	const statusRaw = statusInput ? statusInput.value.trim() : "";
-	// 3. Deklarasikan variabel status (HANYA SEKALI)
+	const statusRaw = ($('#status').val() || "").trim();
 	const status = statusRaw.toLowerCase();
-	// 4. Ambil keterangan
-	const keteranganInput = document.getElementById("keterangan");
-	const keterangan = keteranganInput ? keteranganInput.value.trim() : "";
+    const keterangan = ($('#keterangan').val() || "").trim();
 
     // 📋 Validasi Status
     if (!statusRaw) {
