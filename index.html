@@ -1345,7 +1345,7 @@ document.getElementById('snap').addEventListener('click', async () => {
             const finalBoxWidth = Math.min(dynamicWidth, canvas.width);
     
             // BACKGROUND DINAMIS
-            const padding = 15;
+            const padding = 150;
             const boxTop = currentY - totalHeight - padding;
             const boxBottom = currentY + padding;
             const boxHeight = totalHeight + padding * 2;
@@ -1360,13 +1360,13 @@ document.getElementById('snap').addEventListener('click', async () => {
             // GARIS KUNING FIX
             ctx2.shadowColor = "transparent";
             ctx2.strokeStyle = "#FFC107";
-            ctx2.lineWidth = 4;
+            ctx2.lineWidth = 40;
             ctx2.lineCap = "round";
             const halfStroke = ctx2.lineWidth / 2;
     
             ctx2.beginPath();
-            ctx2.moveTo(startX - 20, boxTop + halfStroke);
-            ctx2.lineTo(startX - 20, boxBottom - halfStroke);
+            ctx2.moveTo(startX - 12, boxTop + halfStroke);
+            ctx2.lineTo(startX - 12, boxBottom - halfStroke);
             ctx2.stroke();
     
             // GAMBAR TEKS DARI BAWAH NAIK
