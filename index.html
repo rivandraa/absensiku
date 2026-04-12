@@ -1155,7 +1155,7 @@ document.getElementById('snap').addEventListener('click', async () => {
   const keterangan = ketField ? ketField.value.trim() : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const koordinatValue = tampil ? tampil.value : "";
-  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+  const  = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
 
   // 1. VALIDASI DASAR
   if (!status) {
@@ -1518,9 +1518,15 @@ async function submitAbsensiForm() {
         return;
     }
 
-    const statusRaw = $('#status').val().trim();
-    const status = statusRaw.toLowerCase();
-    const keterangan = $('#keterangan').val().trim();
+	// 1. Ambil elemen status
+	const statusInput = document.getElementById("status");
+	// 2. Ambil nilainya, jika ada lakukan trim, jika tidak ada berikan string kosong
+	const statusRaw = statusInput ? statusInput.value.trim() : "";
+	// 3. Deklarasikan variabel status (HANYA SEKALI)
+	const status = statusRaw.toLowerCase();
+	// 4. Ambil keterangan
+	const keteranganInput = document.getElementById("keterangan");
+	const keterangan = keteranganInput ? keteranganInput.value.trim() : "";
 
     // 📋 Validasi Status
     if (!statusRaw) {
@@ -1544,7 +1550,7 @@ async function submitAbsensiForm() {
     // 📸 Validasi Foto
     const wajibFoto = ["hadir", "dinas", "wfh"].includes(status);
     if (wajibFoto && !fotoData) {
-        showPopup("Foto Kehadiran wajib untuk status " + statusRaw + "!", "warning");
+        showPopup("Foto Kehadiran wajib untuk status " +  + "!", "warning");
         vibrateAlertShort();
         isSubmitting = false;
         return;
@@ -1591,7 +1597,7 @@ async function submitAbsensiForm() {
         action: "submitAbsensi", // Memberitahu GAS action apa yang dijalankan
         nama: val[0],
         jabatan: val[1],
-        status: statusRaw,
+        status: ,
         keterangan: keterangan,
         statusPegawai: userData.statusPegawai,
         spreadsheetId: userData.spreadsheetId,
