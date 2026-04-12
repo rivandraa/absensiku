@@ -725,7 +725,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     let displayText = `Lokasi Anda : ${currentLat.toFixed(6)},${currentLon.toFixed(6)}\n`;
     displayText += `Tingkat Akurasi : ${displayAcc.toFixed(0)} Meter | > ${MAX_ACCURACY} Meter\n`;
 
-    // BARIS 3 (Logika Kondisional)
+// BARIS 3 (Logika Kondisional)
     if (displayAcc > MAX_ACCURACY) {
         // A. Jika Akurasi masih buruk
         displayText += `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
@@ -733,7 +733,7 @@ function forceUpdateDistanceUI(lat, lon, acc) {
     }  
     else if (status === "Hadir" || status === "WFH") {
         // B. Jika Akurasi sudah Bagus
-        if (targetLocation) {
+        if (targetLocation && targetLocation.lat && targetLocation.lon) {
             const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
             const insideArea = distance <= RADIUS_LIMIT;
             lastInsideArea = insideArea;
@@ -741,16 +741,28 @@ function forceUpdateDistanceUI(lat, lon, acc) {
             displayText += insideArea
                 ? `✅ Berada dalam area/radius ${namaLokasi}`
                 : `❌ Di luar area | 📏 Jarak ${distance.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`;
-        } else {
-            // Tampilan saat fetch data kantor (Tanpa \n di awal agar tidak ada baris kosong)
-            displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
+        } 
+        else {
+            // --- PERBAIKAN DI SINI ---
+            // Cek apakah memang sedang fetching atau datanya memang tidak ada/strip (-)
+            const tampil = document.getElementById("titikKoordinatTampil")?.value;
+            
+            if (isFetchingLocation) {
+                // Hanya tampilkan jika sedang loading
+                displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
+            } else if (tampil === "-" || !targetLocation) {
+                // Jika data sudah selesai di-fetch dan hasilnya "-" atau null, tampilkan pesan error yang jelas
+                displayText += `⚠️ Koordinat target belum disetting.`;
+            }
+            
             lastInsideArea = false;
+            // --------------------------
         }
     }  
     else if (["Dinas", "Izin", "Sakit"].includes(status)) {
-        displayText += ``;
+        displayText += ``; // Kosongkan untuk status non-lokasi
         lastInsideArea = true;
-    }  
+    }
 
     // Update tampilan utama
     updateGPSDisplay(displayText);
@@ -822,7 +834,7 @@ async function refreshTargetLocation(callback, isSilent = false) {
             if (gpsData[0] !== 0) forceUpdateDistanceUI();
         } else {
             targetLocation = null;
-            if (tampil) tampil.value = "Titik tidak ditemukan";
+            if (tampil) tampil.value = "-";
         }
     } catch (error) {
         console.error("Gagal refresh:", error);
