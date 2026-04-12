@@ -1544,7 +1544,7 @@ async function submitAbsensiForm() {
     // 📸 Validasi Foto
     const wajibFoto = ["hadir", "dinas", "wfh"].includes(status);
     if (wajibFoto && !fotoData) {
-        showPopup("Foto Kehadiran wajib untuk status " +  + "!", "warning");
+        showPopup("Foto Kehadiran wajib untuk status " +  + "statusRaw", "warning");
         vibrateAlertShort();
         isSubmitting = false;
         return;
@@ -1591,7 +1591,7 @@ async function submitAbsensiForm() {
         action: "submitAbsensi", // Memberitahu GAS action apa yang dijalankan
         nama: val[0],
         jabatan: val[1],
-        status: ,
+        status: statusRaw,
         keterangan: keterangan,
         statusPegawai: userData.statusPegawai,
         spreadsheetId: userData.spreadsheetId,
