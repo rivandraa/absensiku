@@ -983,8 +983,6 @@ function startGPSMonitoring(onReady) {
 }
 
     // ====== EVENT LISTENER STATUS ======
-let isManualRestarting = false; // Flag khusus
-	
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     const restartBtn = document.getElementById("restartGPS");
@@ -1009,12 +1007,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	        startGPS(() => {
 	            restartBtn.innerHTML = "🔄 Restart GPS";
 	            restartBtn.disabled = false;
-	
-	            // Munculkan popup HANYA jika memang user yang klik tombol
-	            if (isManualRestarting) {
-	                showPopup("GPS berhasil di-restart.", "success", 3000);
-	                isManualRestarting = false; // Reset flag setelah muncul
-	            }
 	        });
 	    });
 	}
