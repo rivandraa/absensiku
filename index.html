@@ -983,6 +983,8 @@ function startGPSMonitoring(onReady) {
 }
 
     // ====== EVENT LISTENER STATUS ======
+let isManualRestarting = false; // Flag khusus
+	
 document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("status");
     const restartBtn = document.getElementById("restartGPS");
@@ -997,22 +999,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // === restart gps ===
 	if (restartBtn) {
 	    restartBtn.addEventListener("click", () => {
+	        isManualRestarting = true; // Tandai: Ini aksi manual!
 	        gpsSystemActive = false;
 	        stopGPSMonitoring();
 	
 	        restartBtn.innerHTML = "⏳ Restarting GPS";
 	        restartBtn.disabled = true;
+	
 	        startGPS(() => {
 	            restartBtn.innerHTML = "🔄 Restart GPS";
 	            restartBtn.disabled = false;
 	
-	            //if (typeof showPopup === "function") {
-	               //showPopup("GPS berhasil di-restart.", "success", 5000);
-	            	//}
-	        	});
-	    	});
-		}
-	});
+	            // Munculkan popup HANYA jika memang user yang klik tombol
+	            if (isManualRestarting) {
+	                showPopup("GPS berhasil di-restart.", "success", 3000);
+	                isManualRestarting = false; // Reset flag setelah muncul
+	            }
+	        });
+	    });
+	}
+});
 	
 /* =========================================================================================================
     BAGIAN KODE KAMERA & FOTO DOKUMENTASI (REDESAIN + ERROR MAPPING)
