@@ -1155,7 +1155,7 @@ document.getElementById('snap').addEventListener('click', async () => {
   const keterangan = ketField ? ketField.value.trim() : "";
   const tampil = document.getElementById("titikKoordinatTampil");
   const koordinatValue = tampil ? tampil.value : "";
-  const  = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
+  const statusRaw = statusInput ? statusInput.options[statusInput.selectedIndex].text : status;
 
   // 1. VALIDASI DASAR
   if (!status) {
