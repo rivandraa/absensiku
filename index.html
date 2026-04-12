@@ -731,9 +731,8 @@ function forceUpdateDistanceUI(lat, lon, acc) {
         displayText += `Sedang meningkatkan akurasi${".".repeat(accDots)}`;
         lastInsideArea = false; 
     }  
-    else if (status === "Hadir" || status === "WFH") {
-        // B. Jika Akurasi sudah Bagus
-        if (targetLocation && targetLocation.lat && targetLocation.lon) {
+else if (status === "Hadir" || status === "WFH") {
+        if (targetLocation) {
             const distance = getDistanceFromLatLonInMeters(currentLat, currentLon, targetLocation.lat, targetLocation.lon);
             const insideArea = distance <= RADIUS_LIMIT;
             lastInsideArea = insideArea;
@@ -741,24 +740,17 @@ function forceUpdateDistanceUI(lat, lon, acc) {
             displayText += insideArea
                 ? `✅ Berada dalam area/radius ${namaLokasi}`
                 : `❌ Di luar area | 📏 Jarak ${distance.toFixed(0)}m (Max. ${RADIUS_LIMIT}m)`;
-        } 
-        else {
-            // --- PERBAIKAN DI SINI ---
-            // Cek apakah memang sedang fetching atau datanya memang tidak ada/strip (-)
-            const tampil = document.getElementById("titikKoordinatTampil")?.value;
+        } else {
+            // JIKA KOSONG ATAU "-", CEK DISINI
+            const isiKordinat = (elNama && elNama.value) ? elNama.value : "";
             
-            if (isFetchingLocation) {
-                // Hanya tampilkan jika sedang loading
+            if (isiKordinat !== "-" && isiKordinat !== "") {
                 displayText += `Silakan Tunggu :\n- Sedang Update lokasi...\n- Sedang Menghitung jarak anda...`;
-            } else if (tampil === "-" || !targetLocation) {
-                // Jika data sudah selesai di-fetch dan hasilnya "-" atau null, tampilkan pesan error yang jelas
-                displayText += `⚠️ Koordinat target belum disetting.`;
             }
             
             lastInsideArea = false;
-            // --------------------------
         }
-    }  
+    }
     else if (["Dinas", "Izin", "Sakit"].includes(status)) {
         displayText += ``; // Kosongkan untuk status non-lokasi
         lastInsideArea = true;
