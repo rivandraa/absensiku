@@ -1518,9 +1518,9 @@ async function submitAbsensiForm() {
         return;
     }
 
-	const statusRaw = ($('#status').val() || "").trim();
-	const status = statusRaw.toLowerCase();
+    const statusRaw = ($('#status').val() || "").trim();
     const keterangan = ($('#keterangan').val() || "").trim();
+    const status = statusRaw.toLowerCase();
 
     // 📋 Validasi Status
     if (!statusRaw) {
